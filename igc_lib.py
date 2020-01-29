@@ -458,13 +458,17 @@ class Glide:
 
     def alt_change(self):
         """Return the overall altitude change in the glide, meters."""
-        return self.enter_fix.alt - self.exit_fix.alt
+        return  self.exit_fix.alt - self.enter_fix.alt
 
     def glide_ratio(self):
         """Returns the L/D of the glide."""
         if math.fabs(self.alt_change()) < 1e-7:
             return 0.0
         return (self.track_length * 1000.0) / self.alt_change()
+
+    def average_vario(self):
+        """Returns the average vario during glide"""
+        return self.alt_change() / self.time_change()
 
     def __repr__(self):
         return self.__str__()
@@ -473,10 +477,10 @@ class Glide:
         hms = _rawtime_float_to_hms(self.time_change())
         return (
             ("Glide(dist=%.2f km, avg_speed=%.2f kph, "
-             "avg L/D=%.2f duration=%dm %ds)") % (
+             "avg L/D=%.2f duration=%dm %ds alt_change=%i m)") % (
                 self.track_length, self.speed(), self.glide_ratio(),
-                hms.minutes, hms.seconds))
-
+                hms.minutes, hms.seconds, self.alt_change())
+        )
 
 class FlightParsingConfig(object):
     """Configuration for parsing an IGC file.
@@ -652,7 +656,7 @@ class Flight:
         
         # Take the first file in the archive
         target_file_in_archive = zip_file.filelist[0].filename if zip_file.filelist else None
-
+       
         # Open the file and parse it
         with zip_file.open(target_file_in_archive) as flight_file:
             for binary_line in flight_file:

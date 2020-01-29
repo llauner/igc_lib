@@ -13,7 +13,7 @@
     <RootNamespace>github_igc_lib</RootNamespace>
     <IsWindowsApplication>True</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>D:\_Downloads\igc\2019_zip D:\_Downloads\igc\heatmap --zip</CommandLineArguments>
+    <CommandLineArguments>D:\_Downloads\igc\2019_igc D:\_Downloads\igc\heatmap</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

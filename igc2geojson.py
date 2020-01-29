@@ -9,6 +9,7 @@ import argparse     as ap
 import time
 import geojson as gjson
 import zipfile
+import numpy as np
 
 
 def print_flight_details(flight):
@@ -40,10 +41,11 @@ def dump_flight(flight, input_file):
     dumpers.dump_flight_to_kml(flight, kml_file)
 
    
-def dump_to_geojson(output_filename, list_thermals):
+def dump_to_geojson(output_filename, list_thermals, list_glides):
     """
     
     """
+    ### Dump thermals ###
     features = []
 
     for thermal in list_thermals:
@@ -62,12 +64,38 @@ def dump_to_geojson(output_filename, list_thermals):
     with open('{}.geojson'.format(output_filename), 'w') as f:
         gjson.dump(feature_collection, f)
 
+    #### Dump Glides ###
+    ## Keep glides with sink rate <=2m/s
+    #glide_features = []
+    #for glide in list_glides:
+    #    lat_enter, lon_enter = glide.enter_fix.lat, glide.enter_fix.lon
+    #    lat_exit, lon_exit = glide.exit_fix.lat, glide.exit_fix.lon
+    #    altitude_enter = int(glide.enter_fix.press_alt)
+    #    altitude_exit = int(glide.exit_fix.press_alt)
+    #    time_enter = glide.enter_fix.rawtime
+    #    time_exit = glide.exit_fix.rawtime
+    #    vario = glide.average_vario()
+        
+    #    if vario <= -1.5:
+    #        json_line=gjson.LineString([(lon_enter, lat_enter, altitude_enter),(lon_exit, lat_exit, altitude_exit)])
+    #        glide_features.append(gjson.Feature(geometry=json_line, properties={"vario": vario, 
+    #                                                                            "time_in": time_enter, 
+    #                                                                            "time_out": time_exit, 
+    #                                                                            "alt_in": altitude_enter, 
+    #                                                                            "alt_out": altitude_exit}))
+
+    #feature_collection = gjson.FeatureCollection(glide_features)
+    ##Write output
+    #with open('{}_coldMap.geojson'.format(output_filename), 'w') as f:
+    #    gjson.dump(feature_collection, f)
+
+
 def main():
     #Grabs directory and outname
     parser = ap.ArgumentParser()
     parser.add_argument('dir',          help='Path to bulk .igc files'  )
     parser.add_argument('output',       help='Geojson file name'        )
-    parser.add_argument('--zip', action='store_true', dest='isZip', help='Get igc file from .zip'  )   # Will look for .zip files containing .igc file rather than igc file directly
+    parser.add_argument('--zip', action='store_true', dest='isZip', help='Get igc file from .zip (1 .igc per .zip)'  )   # Will look for .zip files containing .igc file rather than igc file directly
     arguments = parser.parse_args()
     
     dir = arguments.dir
@@ -103,6 +131,7 @@ def main():
 
     ### Collect all flights
     global_thermals = []
+    global_glides = []
 
     ### Analyse files
     files_count = len(all_files)
@@ -110,19 +139,20 @@ def main():
         for i,file in enumerate(all_files):
             if not isZip:
                 flight = igc_lib.Flight.create_from_file("{0}/{1}".format(dir, file))
-                print("{}/{} :{} \t thermals={}".format(i+1,files_count, file, len(flight.thermals)))
+                print("{}/{} :{} \t Thermals#={}".format(i+1,files_count, file, len(flight.thermals)))
             else:
                 zip_filename = "{0}/{1}".format(dir, zip_files[i])
                 with zipfile.ZipFile(zip_filename) as zip_file:
                     flight = igc_lib.Flight.create_from_zipfile(zip_file)
-                    print("{}/{} :{} -> {} \t thermals={}".format(i+1,files_count, file, zip_file.filelist[0].filename, len(flight.thermals)))
+                    print("{}/{} :{} -> {} \t Thermals#={}".format(i+1,files_count, file, zip_file.filelist[0].filename, len(flight.thermals)))
         
             if flight.valid:
                 global_thermals.extend(flight.thermals)
+                global_glides.extend(flight.glides)
 
 
         # Dump to GeoJSON
-        dump_to_geojson(output, global_thermals)
+        dump_to_geojson(output, global_thermals, global_glides)
         print("GeoJson output to: {}".format(output))
     else:
         print("No .igc file found")
@@ -131,3 +161,5 @@ def main():
 if __name__ == "__main__":
     main()
     exit()
+
+
