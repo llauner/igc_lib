@@ -86,5 +86,5 @@ def main(request):
         print("No .igc file found")
 
 if __name__ == "__main__":
-    main()
+    main(request)
     exit()
