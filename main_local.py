@@ -87,10 +87,6 @@ def main():
         print("No .igc file found")
     return str(time.time())
 
-
-
-
-
 if __name__ == "__main__":
     main()
     exit()

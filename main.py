@@ -1,4 +1,4 @@
-import time
+from datetime import datetime
 import os
 import igc2geojson
 import igc_lib
@@ -7,6 +7,8 @@ import igc_lib
 Main entry point for Google function
 '''
 def main(request):
+    script_start_time = datetime.now()
+
     isOutputToGoogleCloudStorage = True
     # Create output file name by adding date and time as a suffix
     output = "heatmap"
@@ -42,5 +44,11 @@ def main(request):
             print("Google Storage output to: {}".format(output))
     else:
         print("No .igc file found")
-    return str(time.time())
+
+    script_end_time = datetime.now()
+    return "Script Start -> End time: {} -> {}".format(script_start_time, script_end_time)
+
+if __name__ == "__main__":
+    main(None)
+    exit()
 
