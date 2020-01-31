@@ -5,6 +5,7 @@ import igc2geojson
 import igc_lib
 
 def main(request):
+    log_output = ""
     #Grabs directory and outname
     parser = ap.ArgumentParser()
     parser.add_argument('dir',          help='Path to bulk .igc files'  )
@@ -84,7 +85,5 @@ def main(request):
             print("Google Storage output to: {}".format(output))
     else:
         print("No .igc file found")
+    return str(time.time())
 
-if __name__ == "__main__":
-    main(request)
-    exit()

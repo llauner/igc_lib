@@ -16,6 +16,8 @@
     <CommandLineArguments>D:\_Downloads\igc\2019_igc heatmap  --out-local-file</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <Environment>GOOGLE_APPLICATION_CREDENTIALS=C:\Users\l.launer\src\MapBox\Service_Account_Key-IgcHeatMap-4bca6050958e.json</Environment>
+    <InterpreterArguments>
+    </InterpreterArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
