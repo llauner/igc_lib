@@ -13,8 +13,9 @@
     <RootNamespace>github_igc_lib</RootNamespace>
     <IsWindowsApplication>True</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>D:\_Downloads\igc\2019_igc D:\_Downloads\igc\heatmap</CommandLineArguments>
+    <CommandLineArguments>D:\_Downloads\igc\2019_igc heatmap  --out-google-cloud-storage</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <Environment>GOOGLE_APPLICATION_CREDENTIALS=C:\Users\l.launer\src\MapBox\Service_Account_Key-IgcHeatMap-4bca6050958e.json</Environment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -45,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="README.md" />
+    <Content Include="requirements.txt" />
     <Content Include="testfiles\flight_with_middle_landing.igc" />
     <Content Include="testfiles\napret.igc" />
     <Content Include="testfiles\napret.lkt" />

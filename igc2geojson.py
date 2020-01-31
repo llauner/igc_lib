@@ -10,6 +10,10 @@ import time
 import geojson as gjson
 import zipfile
 import numpy as np
+from google.cloud import storage # Imports the Google Cloud client library
+
+
+google_storage_bucket_id = "bucket_heatmap"      # Google storage bucket name
 
 
 def print_flight_details(flight):
@@ -40,16 +44,11 @@ def dump_flight(flight, input_file):
     dumpers.dump_flight_to_csv(flight, flight_csv_file, thermals_csv_file)
     dumpers.dump_flight_to_kml(flight, kml_file)
 
-   
-def dump_to_geojson(output_filename, list_thermals, list_glides):
-    """
-    
-    """
-    ### Dump thermals ###
+def get_geojson_feature_collection(list_thermals):
+     ### Dump thermals into geojson ###
     features = []
 
     for thermal in list_thermals:
-        #print(thermal)
         lat = thermal.enter_fix.lat
         lon = thermal.enter_fix.lon
         vario = round(thermal.vertical_velocity(),2)
@@ -60,35 +59,40 @@ def dump_to_geojson(output_filename, list_thermals, list_glides):
                                                                        "alt_in": altitude_enter}))
 
     feature_collection = gjson.FeatureCollection(features)
+    return feature_collection
+
+   
+def dump_to_geojson(output_filename, list_thermals):
+    # Dump thermals
+    feature_collection = get_geojson_feature_collection(list_thermals)
+
     #Write output
     with open('{}.geojson'.format(output_filename), 'w') as f:
         gjson.dump(feature_collection, f)
 
-    #### Dump Glides ###
-    ## Keep glides with sink rate <=2m/s
-    #glide_features = []
-    #for glide in list_glides:
-    #    lat_enter, lon_enter = glide.enter_fix.lat, glide.enter_fix.lon
-    #    lat_exit, lon_exit = glide.exit_fix.lat, glide.exit_fix.lon
-    #    altitude_enter = int(glide.enter_fix.press_alt)
-    #    altitude_exit = int(glide.exit_fix.press_alt)
-    #    time_enter = glide.enter_fix.rawtime
-    #    time_exit = glide.exit_fix.rawtime
-    #    vario = glide.average_vario()
-        
-    #    if vario <= -1.5:
-    #        json_line=gjson.LineString([(lon_enter, lat_enter, altitude_enter),(lon_exit, lat_exit, altitude_exit)])
-    #        glide_features.append(gjson.Feature(geometry=json_line, properties={"vario": vario, 
-    #                                                                            "time_in": time_enter, 
-    #                                                                            "time_out": time_exit, 
-    #                                                                            "alt_in": altitude_enter, 
-    #                                                                            "alt_out": altitude_exit}))
+def test_google_storage():
+    # Instantiates a client
+    storage_client = storage.Client()
 
-    #feature_collection = gjson.FeatureCollection(glide_features)
-    ##Write output
-    #with open('{}_coldMap.geojson'.format(output_filename), 'w') as f:
-    #    gjson.dump(feature_collection, f)
+    bucket = storage_client.get_bucket(google_storage_bucket_id)
+    if bucket.exists():
+        blob = bucket.blob("delete_me.txt")
 
+        blob.upload_from_string("hello !!")
+
+
+def dump_to_google_storage(output_filename,list_thermals):
+    # Dump thermals
+    feature_collection = get_geojson_feature_collection(list_thermals)
+    output_filename = '{}.geojson'.format(output_filename)
+
+    # Instantiates a client
+    storage_client = storage.Client()
+
+    bucket = storage_client.get_bucket(google_storage_bucket_id)
+    if bucket.exists():
+        blob = bucket.blob(output_filename)
+        blob.upload_from_string(str(feature_collection))
 
 def main():
     #Grabs directory and outname
@@ -96,18 +100,26 @@ def main():
     parser.add_argument('dir',          help='Path to bulk .igc files'  )
     parser.add_argument('output',       help='Geojson file name'        )
     parser.add_argument('--zip', action='store_true', dest='isZip', help='Get igc file from .zip (1 .igc per .zip)'  )   # Will look for .zip files containing .igc file rather than igc file directly
+    parser.add_argument('--out-local-file', action='store_true', dest='isOutputToLocalFile', help='Will write to local file if set to true'  )
+    parser.add_argument('--out-google-cloud-storage', action='store_true', dest='isOutputToGoogleCloudStorage', help='Will write to Google Cloud Storage if set to true'  )
+    parser.add_argument('--out-suffix-epoch', action='store_true', dest='isOutputWithEpochSuffix', help='Add epoch_ as suffix to output file name'  )
     arguments = parser.parse_args()
     
     dir = arguments.dir
     output = arguments.output
     isZip = arguments.isZip
+    isOutputToLocalFile = arguments.isOutputToLocalFile
+    isOutputToGoogleCloudStorage = arguments.isOutputToGoogleCloudStorage
+    isOutputWithEpochSuffix = arguments.isOutputWithEpochSuffix
+    
 
     # Create output file name by adding date and time as a suffix
     output = arguments.output
     now = epoch_time = int(time.time())
     dir_name = os.path.dirname(output)
     file_name = os.path.basename(output)
-    output = dir_name + "\\" + str(now) + "_" + file_name
+    output_filename =  str(now)  + "_" + file_name if isOutputWithEpochSuffix else file_name
+    output = dir_name + "\\" if dir_name else "" + output_filename
     
     all_files = []      # All files to be parsed (.igc or .zip)
     
@@ -152,8 +164,14 @@ def main():
 
 
         # Dump to GeoJSON
-        dump_to_geojson(output, global_thermals, global_glides)
-        print("GeoJson output to: {}".format(output))
+        if isOutputToLocalFile:
+            dump_to_geojson(output, global_thermals)
+            print("GeoJson output to: {}".format(output))
+
+        # Dump to Google storage
+        if isOutputToGoogleCloudStorage:
+            dump_to_google_storage(output_filename, global_thermals)
+            print("Google Storage output to: {}".format(output))
     else:
         print("No .igc file found")
 
