@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c7d8a499-cb80-42f1-807a-a8fa5c50e7e2</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>igc2geojson.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -13,7 +13,7 @@
     <RootNamespace>github_igc_lib</RootNamespace>
     <IsWindowsApplication>True</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>D:\_Downloads\igc\2019_igc heatmap  --out-google-cloud-storage</CommandLineArguments>
+    <CommandLineArguments>D:\_Downloads\igc\2019_igc heatmap  --out-local-file</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <Environment>GOOGLE_APPLICATION_CREDENTIALS=C:\Users\l.launer\src\MapBox\Service_Account_Key-IgcHeatMap-4bca6050958e.json</Environment>
   </PropertyGroup>
@@ -35,6 +35,9 @@
     <Compile Include="lib\test_viterbi.py" />
     <Compile Include="lib\viterbi.py" />
     <Compile Include="lib\__init__.py" />
+    <Compile Include="main.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="test_igc_lib.py" />
     <Compile Include="tools\baum_welch_trainer.py" />
     <Compile Include="__init__.py" />
