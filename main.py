@@ -3,6 +3,9 @@ import os
 import igc2geojson
 import igc_lib
 
+'''
+Main entry point for Google function
+'''
 def main(request):
     isOutputToGoogleCloudStorage = true
     # Create output file name by adding date and time as a suffix

@@ -37,7 +37,7 @@
     <Compile Include="lib\test_viterbi.py" />
     <Compile Include="lib\viterbi.py" />
     <Compile Include="lib\__init__.py" />
-    <Compile Include="main_cloud.py">
+    <Compile Include="main.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="main_local.py">
