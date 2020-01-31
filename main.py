@@ -7,7 +7,7 @@ import igc_lib
 Main entry point for Google function
 '''
 def main(request):
-    isOutputToGoogleCloudStorage = true
+    isOutputToGoogleCloudStorage = True
     # Create output file name by adding date and time as a suffix
     output = "heatmap"
     
