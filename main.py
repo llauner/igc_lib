@@ -4,7 +4,7 @@ import os
 import igc2geojson
 import igc_lib
 
-def main():
+def main(request):
     #Grabs directory and outname
     parser = ap.ArgumentParser()
     parser.add_argument('dir',          help='Path to bulk .igc files'  )
