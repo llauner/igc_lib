@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c7d8a499-cb80-42f1-807a-a8fa5c50e7e2</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>main_local.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -37,7 +37,10 @@
     <Compile Include="lib\test_viterbi.py" />
     <Compile Include="lib\viterbi.py" />
     <Compile Include="lib\__init__.py" />
-    <Compile Include="main.py">
+    <Compile Include="main_cloud.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="main_local.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="test_igc_lib.py" />

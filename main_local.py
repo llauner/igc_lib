@@ -4,7 +4,7 @@ import os
 import igc2geojson
 import igc_lib
 
-def main(request):
+def main():
     log_output = ""
     #Grabs directory and outname
     parser = ap.ArgumentParser()
@@ -87,3 +87,10 @@ def main(request):
         print("No .igc file found")
     return str(time.time())
 
+
+
+
+
+if __name__ == "__main__":
+    main()
+    exit()
