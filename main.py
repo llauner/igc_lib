@@ -9,6 +9,12 @@ Main entry point for Google function
 def main(request):
     script_start_time = datetime.now()
 
+    # Get FTP server credentials from environment variable
+    ftp_server_name = os.environ['FTP_SERVER_NAME'].strip()
+    ftp_login = os.environ['FTP_LOGIN'].strip()
+    ftp_password = os.environ['FTP_PASSWORD'].strip()
+
+
     isOutputToGoogleCloudStorage = True
     # Create output file name by adding date and time as a suffix
     output = "heatmap"

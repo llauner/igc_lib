@@ -685,6 +685,43 @@ class Flight:
         flight = Flight(fixes, a_records, h_records, i_records, config)
         return flight
 
+    @staticmethod
+    def create_from_lines(lines, config_class=FlightParsingConfig):
+        '''
+        Create Flight from list of lines
+        '''
+        config = config_class()
+        fixes = []
+        a_records = []
+        i_records = []
+        h_records = []
+         
+        # Open the file and parse it
+        for line in lines:
+            line = line.replace('\n', '').replace('\r', '')
+            if not line:
+                continue
+            if line[0] == 'A':
+                a_records.append(line)
+            elif line[0] == 'B':
+                fix = GNSSFix.build_from_B_record(line, index=len(fixes))
+                if fix is not None:
+                    if fixes and math.fabs(fix.rawtime - fixes[-1].rawtime) < 1e-5:
+                        # The time did not change since the previous fix.
+                        # Ignore this fix.
+                        pass
+                    else:
+                        fixes.append(fix)
+            elif line[0] == 'I':
+                i_records.append(line)
+            elif line[0] == 'H':
+                h_records.append(line)
+            else:
+                # Do not parse any other types of IGC records
+                pass
+        flight = Flight(fixes, a_records, h_records, i_records, config)
+        return flight
+
     def __init__(self, fixes, a_records, h_records, i_records, config):
         """Initializer of the Flight class. Do not use directly."""
         self._config = config

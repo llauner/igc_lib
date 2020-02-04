@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c7d8a499-cb80-42f1-807a-a8fa5c50e7e2</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>main_local.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -13,9 +13,12 @@
     <RootNamespace>github_igc_lib</RootNamespace>
     <IsWindowsApplication>True</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>D:\_Downloads\igc\2019_igc heatmap  --out-local-file</CommandLineArguments>
+    <CommandLineArguments>D:\_Downloads\igc\2019_igc heatmap  --out-local-file --ftp-from-env</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <Environment>GOOGLE_APPLICATION_CREDENTIALS=C:\Users\l.launer\src\MapBox\Service_Account_Key-IgcHeatMap-4bca6050958e.json</Environment>
+    <Environment>GOOGLE_APPLICATION_CREDENTIALS=C:\Users\l.launer\src\MapBox\Service_Account_Key-IgcHeatMap-4bca6050958e.json
+FTP_SERVER_NAME=localhost
+FTP_LOGIN=launerl
+FTP_PASSWORD=launerl</Environment>
     <InterpreterArguments>
     </InterpreterArguments>
   </PropertyGroup>
