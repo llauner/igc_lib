@@ -46,6 +46,7 @@ def main():
     parser.add_argument('--ftp', nargs=3, help='Get the igc files from FTP <server name> <username> <password>'  )
     parser.add_argument('--ftp-from-env', action='store_true', dest='isFtpFromEnvironmentVariable', help='Will get FTP details from environment variables'  )
     parser.add_argument('--out-ftp', action='store_true', dest='isOutputToFtp', help='Will write output to FTP'  )
+    parser.add_argument('--dump-track', action='store_true', dest='isDumpTrack', help='Will dump tracks if set to true'  )
     arguments = parser.parse_args()
     
     dir = arguments.dir
@@ -71,6 +72,8 @@ def main():
         ftp_server = os.environ['FTP_SERVER_NAME'].strip()
         ftp_username = os.environ['FTP_LOGIN'].strip()
         ftp_password = os.environ['FTP_PASSWORD'].strip()
+
+    isDumpTrack = arguments.isDumpTrack
     
 
     # Create output file name by adding date and time as a suffix
@@ -79,7 +82,7 @@ def main():
     dir_name = os.path.dirname(output)
     file_name = os.path.basename(output)
     output_filename =  str(now)  + "_" + file_name if isOutputWithEpochSuffix else file_name
-    output = dir_name + "\\" if dir_name else "" + output_filename
+    output = dir_name + ("\\" if dir_name else "") + output_filename
     
     all_files = []      # All files to be parsed (.igc or .zip)
     
@@ -106,7 +109,7 @@ def main():
 
     ### Collect all flights
     global_thermals = []
-    global_glides = []
+    global_flights = []
 
     ### Analyse files
     files_count = len(all_files)
@@ -128,7 +131,7 @@ def main():
         
             if flight.valid:
                 global_thermals.extend(flight.thermals)
-                global_glides.extend(flight.glides)
+                global_flights.append(flight)
 
 
         ### Dump to GeoJSON
@@ -136,6 +139,14 @@ def main():
         if isOutputToLocalFile:
             igc2geojson.dump_to_geojson(output, global_thermals)
             print("GeoJson output to: {}".format(output))
+
+            # Dump Tracks
+            if isDumpTrack:
+                tracks_filename = output + '_tracks'
+                igc2geojson.dump_tracks_to_file(tracks_filename, global_flights)
+                print("GeoJson output to: {}".format(tracks_filename))
+
+
         # Dump to FTP
         elif isOutputToFtp:
             igc2geojson.dump_to_ftp(ftp_client,output, global_thermals)

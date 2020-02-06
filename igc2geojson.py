@@ -60,24 +60,37 @@ def get_geojson_feature_collection(list_thermals):
     feature_collection = gjson.FeatureCollection(features)
     return feature_collection
 
+def get_geojson_track_collection(list_flights):
+    tracks = []
+    for flight in list_flights:
+        for i in range(0, len(flight.fixes)-2):
+            lat1 = flight.fixes[i].lat
+            lon1 = flight.fixes[i].lon
+            lat2 = flight.fixes[i+1].lat
+            lon2 = flight.fixes[i+1].lon
+            json_line=gjson.LineString([(lon1, lat1),(lon2, lat2)])
+            tracks.append(gjson.Feature(geometry=json_line))
+    feature_collection = gjson.FeatureCollection(tracks)
+    return feature_collection
+
+
    
 def dump_to_geojson(output_filename, list_thermals):
     # Dump thermals
     feature_collection = get_geojson_feature_collection(list_thermals)
 
-    #Write output
+    #Write output: thermals
+    with open('{}.geojson'.format(output_filename), 'w') as f:
+        gjson.dump(feature_collection, f)
+ 
+def dump_tracks_to_file(output_filename, list_flights):
+    # Dump thermals
+    feature_collection = get_geojson_track_collection(list_flights)
+
+    #Write output: Tracks
     with open('{}.geojson'.format(output_filename), 'w') as f:
         gjson.dump(feature_collection, f)
 
-def test_google_storage():
-    # Instantiates a client
-    storage_client = storage.Client()
-
-    bucket = storage_client.get_bucket(google_storage_bucket_id)
-    if bucket.exists():
-        blob = bucket.blob("delete_me.txt")
-
-        blob.upload_from_string("hello !!")
 
 
 def dump_to_google_storage(output_filename,list_thermals):
