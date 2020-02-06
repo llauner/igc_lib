@@ -45,6 +45,7 @@ def main():
     parser.add_argument('--out-suffix-epoch', action='store_true', dest='isOutputWithEpochSuffix', help='Add epoch_ as suffix to output file name'  )
     parser.add_argument('--ftp', nargs=3, help='Get the igc files from FTP <server name> <username> <password>'  )
     parser.add_argument('--ftp-from-env', action='store_true', dest='isFtpFromEnvironmentVariable', help='Will get FTP details from environment variables'  )
+    parser.add_argument('--out-ftp', action='store_true', dest='isOutputToFtp', help='Will write output to FTP'  )
     arguments = parser.parse_args()
     
     dir = arguments.dir
@@ -58,6 +59,7 @@ def main():
     ftp_server = None
     ftp_username = None
     ftp_password = None
+    isOutputToFtp = arguments.isOutputToFtp
 
     if arguments.ftp:
         isFtp = True
@@ -129,10 +131,15 @@ def main():
                 global_glides.extend(flight.glides)
 
 
-        # Dump to GeoJSON
+        ### Dump to GeoJSON
+        # Dump to local file
         if isOutputToLocalFile:
             igc2geojson.dump_to_geojson(output, global_thermals)
             print("GeoJson output to: {}".format(output))
+        # Dump to FTP
+        elif isOutputToFtp:
+            igc2geojson.dump_to_ftp(ftp_client,output, global_thermals)
+            print("GeoJson output to FTP: {}".format(ftp_client))
 
         # Dump to Google storage
         if isOutputToGoogleCloudStorage:

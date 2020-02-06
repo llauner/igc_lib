@@ -7,6 +7,9 @@ import lib.dumpers as dumpers
 import geojson as gjson
 import zipfile
 import numpy as np
+import io
+
+from io import BytesIO
 from google.cloud import storage # Imports the Google Cloud client library
 
 
@@ -89,4 +92,16 @@ def dump_to_google_storage(output_filename,list_thermals):
     if bucket.exists():
         blob = bucket.blob(output_filename)
         blob.upload_from_string(str(feature_collection))
+
+def dump_to_ftp(ftp_client, output_filename,list_thermals):
+    # Dump thermals
+    feature_collection = get_geojson_feature_collection(list_thermals)
+    output_filename = '{}.geojson'.format(output_filename)
+    geojson_file_content = str(feature_collection)
+
+    content_as_bytes = BytesIO(bytes(geojson_file_content,encoding='utf-8'))
+
+    # Dump to FTP
+    ftp_client.storlines('STOR ' + output_filename, content_as_bytes)
+
 

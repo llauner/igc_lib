@@ -13,7 +13,7 @@
     <RootNamespace>github_igc_lib</RootNamespace>
     <IsWindowsApplication>True</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>D:\_Downloads\igc\2019_igc heatmap  --out-local-file --ftp-from-env</CommandLineArguments>
+    <CommandLineArguments>D:\_Downloads\igc\2019_igc heatmap  --out-ftp --ftp-from-env</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <Environment>GOOGLE_APPLICATION_CREDENTIALS=C:\Users\l.launer\src\MapBox\Service_Account_Key-IgcHeatMap-4bca6050958e.json
 FTP_SERVER_NAME=localhost
