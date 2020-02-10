@@ -36,6 +36,9 @@ from collections import defaultdict
 import lib.viterbi as viterbi
 import lib.geo as geo
 
+from datetime import date, time, timedelta
+
+
 
 def _strip_non_printable_chars(string):
     """Filters a string removing non-printable characters.
@@ -397,6 +400,22 @@ class GNSSFix:
             "%05d%05d" % (press_alt, gnss_alt) +
             extras)
 
+    def get_time(self):
+        rawtime = int(self.rawtime)
+        hours = rawtime / 3600
+        minutes = (rawtime % 3600) / 60
+        seconds = rawtime % 60
+
+        fix_time = datetime.time(int(hours), int(minutes), int(seconds))
+        return fix_time
+
+    def get_timedelta(self):
+        my_time = self.get_time()
+        timedelta = datetime.datetime.combine(date.min, my_time) - datetime.datetime.min
+        return timedelta
+
+
+
 
 class Thermal:
     """Represents a single thermal detected in a flight.
@@ -447,6 +466,7 @@ class Glide:
         self.enter_fix = enter_fix
         self.exit_fix = exit_fix
         self.track_length = track_length
+        self.fixes = []
 
     def time_change(self):
         """Returns the time spent in the glide, seconds."""
@@ -1222,6 +1242,7 @@ class Flight:
         landing_index = self.landing_fix.index
         flight_fixes = self.fixes[takeoff_index:landing_index + 1]
 
+        glide_fixes = []
         self.thermals = []
         self.glides = []
         circling_now = False
@@ -1247,12 +1268,15 @@ class Flight:
                     # glide ends at start of thermal
                     glide = Glide(first_glide_fix, first_fix,
                                   distance_start_circling)
+                    glide.fixes = glide_fixes
+                    glide_fixes = []
                     self.glides.append(glide)
                     gliding_now = False
 
             if gliding_now:
                 distance = distance + fix.distance_to(last_glide_fix)
                 last_glide_fix = fix
+                glide_fixes.append(fix)
             else:
                 # just started gliding
                 first_glide_fix = fix
@@ -1262,4 +1286,6 @@ class Flight:
 
         if gliding_now:
             glide = Glide(first_glide_fix, last_glide_fix, distance)
+            glide.fixes = glide_fixes
+            glide_fixes = []
             self.glides.append(glide)

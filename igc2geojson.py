@@ -10,6 +10,8 @@ import numpy as np
 import io
 
 from io import BytesIO
+from datetime import datetime
+from datetime import datetime, date, time, timedelta
 from google.cloud import storage # Imports the Google Cloud client library
 
 
@@ -60,7 +62,7 @@ def get_geojson_feature_collection(list_thermals):
     feature_collection = gjson.FeatureCollection(features)
     return feature_collection
 
-def get_geojson_track_collection(list_flights):
+def get_geojson_track_collection_full(list_flights):
     tracks = []
     for flight in list_flights:
         for i in range(0, len(flight.fixes)-2):
@@ -70,6 +72,45 @@ def get_geojson_track_collection(list_flights):
             lon2 = flight.fixes[i+1].lon
             json_line=gjson.LineString([(lon1, lat1),(lon2, lat2)])
             tracks.append(gjson.Feature(geometry=json_line))
+    feature_collection = gjson.FeatureCollection(tracks)
+    return feature_collection
+
+def get_geojson_track_collection_glides_enter_exit(list_flights):
+    tracks = []
+    for flight in list_flights:
+        for i in range(0, len(flight.glides)-1):
+            lat1 = flight.glides[i].enter_fix.lat
+            lon1 = flight.glides[i].enter_fix.lon
+            lat2 = flight.glides[i].exit_fix.lat
+            lon2 =  flight.glides[i].exit_fix.lon
+            json_line=gjson.LineString([(lon1, lat1),(lon2, lat2)])
+            tracks.append(gjson.Feature(geometry=json_line))
+    feature_collection = gjson.FeatureCollection(tracks)
+    return feature_collection
+
+def get_geojson_track_collection(list_flights):
+    tracks = []
+    for flight in list_flights:
+        for glide in flight.glides:
+            for i in range(0, len(glide.fixes) -2):
+                is_fix_to_add = True
+
+                if i>0:
+                    last_fix_time = glide.fixes[i-1].get_timedelta()
+                    #last_fix_date = datetime.combine(date.min, last_fix_time) - datetime.min
+
+                    current_fix_time = glide.fixes[i].get_time()
+                    time_delta = current_fix_time - last_fix_time
+
+                    #is_fix_to_add = True if current_fix_time-last_fix_time >= 30.0 else False
+
+                if is_fix_to_add:
+                    lat1 = round(glide.fixes[i].lat, 4)
+                    lon1 = round(glide.fixes[i].lon, 4)
+                    lat2 = round(glide.fixes[i+1].lat, 4)
+                    lon2 = round(glide.fixes[i+1].lon, 4)
+                    json_line=gjson.LineString([(lon1, lat1),(lon2, lat2)])
+                    tracks.append(gjson.Feature(geometry=json_line))
     feature_collection = gjson.FeatureCollection(tracks)
     return feature_collection
 
@@ -84,12 +125,18 @@ def dump_to_geojson(output_filename, list_thermals):
         gjson.dump(feature_collection, f)
  
 def dump_tracks_to_file(output_filename, list_flights):
+    script_time = datetime.now()
+    print("dump_tracks_to_file: start={}".format(script_time))
+
     # Dump thermals
     feature_collection = get_geojson_track_collection(list_flights)
 
     #Write output: Tracks
     with open('{}.geojson'.format(output_filename), 'w') as f:
         gjson.dump(feature_collection, f)
+    
+    script_time = datetime.now()
+    print("dump_tracks_to_file: end={}".format(script_time))
 
 
 
