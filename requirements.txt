@@ -3,3 +3,4 @@ pathlib2 >= 2.1.0
 geojson >= 2.5.0
 numpy >= 1.17.0
 google-cloud-storage >= 1.25.0
+python.dateutil >= 2.8.0
