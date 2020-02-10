@@ -8,6 +8,7 @@ import geojson as gjson
 import zipfile
 import numpy as np
 import io
+import pathlib
 
 from io import BytesIO
 from datetime import datetime
@@ -153,15 +154,20 @@ def dump_to_google_storage(output_filename,list_thermals):
         blob = bucket.blob(output_filename)
         blob.upload_from_string(str(feature_collection))
 
-def dump_to_ftp(ftp_client, output_filename,list_thermals):
+def dump_to_ftp(ftp_client, output_directory, output_filename,list_thermals):
     # Dump thermals
     feature_collection = get_geojson_feature_collection(list_thermals)
-    output_filename = '{}.geojson'.format(output_filename)
     geojson_file_content = str(feature_collection)
 
     content_as_bytes = BytesIO(bytes(geojson_file_content,encoding='utf-8'))
+    output_filename = '{}.geojson'.format(output_filename)
+
+    # cd to directory
+    if output_directory:
+        ftp_client.cwd(output_directory)
 
     # Dump to FTP
-    ftp_client.storlines('STOR ' + output_filename, content_as_bytes)
+    return_code = ftp_client.storbinary('STOR ' + output_filename, content_as_bytes)
+    return return_code
 
 
