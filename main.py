@@ -51,8 +51,9 @@ def main(request):
 
     ### Parse request parameters
     target_date = None
-    request_args = request.args if request else None
-    if request_args and 'day' in request_args:
+
+    target_date = request.args.get('day')
+    if target_date:
         target_date = escape(request_args['day'])
         print("Request parameter: day={}".format(target_date))
 
