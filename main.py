@@ -54,7 +54,6 @@ def main(request):
 
     target_date = request.args.get('day')
     if target_date:
-        target_date = escape(request_args['day'])
         print("Request parameter: day={}".format(target_date))
 
     global ftp_client_igc                       # FTP client to get IGC .zip files
