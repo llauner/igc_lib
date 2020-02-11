@@ -48,6 +48,14 @@ def get_file_from_ftp(ftp_client, filename):
 Main entry point for Google function
 '''
 def main(request):
+
+    ### Parse request parameters
+    target_date = None
+    request_args = request.args if request else None
+    if request_args and 'day' in request_args:
+        target_date = escape(request_args['day'])
+        print("Request parameter: day={}".format(target_date))
+
     global ftp_client_igc                       # FTP client to get IGC .zip files
     global ftp_client_out                       # FTP client to write .geojson outpout
 
@@ -75,9 +83,10 @@ def main(request):
 
     ### Get files to process
     # Find which date to process
-    target_date = datetime(script_start_time.year, script_start_time.month, script_start_time.day)
-    if script_start_time.hour<17:
-        target_date = target_date - timedelta(days=1)
+    if target_date is None:
+        target_date = datetime(script_start_time.year, script_start_time.month, script_start_time.day)
+        if script_start_time.hour<17:
+            target_date = target_date - timedelta(days=1)
 
     # Create output file name by adding date and time as a suffix
     date_suffix = str(target_date.year) + "_" + str(target_date.month).zfill(2)  + "_" + str(target_date.day).zfill(2)
