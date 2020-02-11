@@ -114,8 +114,6 @@ def get_geojson_track_collection(list_flights):
                     tracks.append(gjson.Feature(geometry=json_line))
     feature_collection = gjson.FeatureCollection(tracks)
     return feature_collection
-
-
    
 def dump_to_geojson(output_filename, list_thermals):
     # Dump thermals
@@ -138,8 +136,6 @@ def dump_tracks_to_file(output_filename, list_flights):
     
     script_time = datetime.now()
     print("dump_tracks_to_file: end={}".format(script_time))
-
-
 
 def dump_to_google_storage(output_filename,list_thermals):
     # Dump thermals
@@ -170,4 +166,13 @@ def dump_to_ftp(ftp_client, output_directory, output_filename,list_thermals):
     return_code = ftp_client.storbinary('STOR ' + output_filename, content_as_bytes)
     return return_code
 
+def dump_string_to_ftp(ftp_client, output_directory, output_filename, string_content):
+    content_as_bytes = BytesIO(bytes(string_content,encoding='utf-8'))
 
+    # cd to directory
+    if output_directory:
+        ftp_client.cwd(output_directory)
+
+    # Dump to FTP
+    return_code = ftp_client.storbinary('STOR ' + output_filename, content_as_bytes)
+    return return_code

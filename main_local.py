@@ -5,6 +5,11 @@ import igc2geojson
 import igc_lib
 import ftplib
 import pathlib
+import pytz
+from datetime import datetime, date, timedelta
+import json
+
+from RunMetadata import RunMetadata
 
 def get_ftp_client(ftp_server, ftp_username, ftp_password):
     ftp_client = ftplib.FTP(ftp_server, ftp_username, ftp_password)
@@ -43,9 +48,6 @@ def main():
     parser.add_argument('--out-local-file', action='store_true', dest='isOutputToLocalFile', help='Will write to local file if set to true'  )
     parser.add_argument('--out-google-cloud-storage', action='store_true', dest='isOutputToGoogleCloudStorage', help='Will write to Google Cloud Storage if set to true'  )
     parser.add_argument('--out-suffix-epoch', action='store_true', dest='isOutputWithEpochSuffix', help='Add epoch_ as suffix to output file name'  )
-    parser.add_argument('--ftp', nargs=3, help='Get the igc files from FTP <server name> <username> <password>'  )
-    parser.add_argument('--ftp-from-env', action='store_true', dest='isFtpFromEnvironmentVariable', help='Will get FTP details from environment variables'  )
-    parser.add_argument('--out-ftp', action='store_true', dest='isOutputToFtp', help='Will write output to FTP'  )
     parser.add_argument('--dump-track', action='store_true', dest='isDumpTrack', help='Will dump tracks if set to true'  )
     arguments = parser.parse_args()
     
@@ -55,23 +57,6 @@ def main():
     isOutputToLocalFile = arguments.isOutputToLocalFile
     isOutputToGoogleCloudStorage = arguments.isOutputToGoogleCloudStorage
     isOutputWithEpochSuffix = arguments.isOutputWithEpochSuffix
-    isFtpFromEnvironmentVariable = arguments.isFtpFromEnvironmentVariable
-    isFtp = False
-    ftp_server = None
-    ftp_username = None
-    ftp_password = None
-    isOutputToFtp = arguments.isOutputToFtp
-
-    if arguments.ftp:
-        isFtp = True
-        ftp_server = arguments.ftp[0]
-        ftp_username = arguments.ftp[1]
-        ftp_password = arguments.ftp[2]
-    elif isFtpFromEnvironmentVariable:
-        isFtp = True
-        ftp_server = os.environ['FTP_SERVER_NAME'].strip()
-        ftp_username = os.environ['FTP_LOGIN'].strip()
-        ftp_password = os.environ['FTP_PASSWORD'].strip()
 
     isDumpTrack = arguments.isDumpTrack
     
@@ -87,10 +72,7 @@ def main():
     all_files = []      # All files to be parsed (.igc or .zip)
     
     # Get files
-    if isFtp:
-        ftp_client = get_ftp_client(ftp_server, ftp_username, ftp_password)
-        all_files = get_file_names_from_ftp(ftp_client)
-    elif not isZip:
+    if not isZip:
     # Read .igc files names in a directory
         igc_files = []
         for file in os.listdir("{}".format(dir)):
@@ -115,12 +97,7 @@ def main():
     files_count = len(all_files)
     if all_files:
         for i,file in enumerate(all_files):
-            if isFtp:
-                ftp_file_lines = get_file_as_lines_from_ftp(ftp_client, file)
-                flight = igc_lib.Flight.create_from_lines(ftp_file_lines)
-                print("{}/{} :{} \t Thermals#={}".format(i+1,files_count, file, len(flight.thermals)))
-
-            elif not isZip:
+            if not isZip:
                 flight = igc_lib.Flight.create_from_file("{0}/{1}".format(dir, file))
                 print("{}/{} :{} \t Thermals#={}".format(i+1,files_count, file, len(flight.thermals)))
             else:
@@ -140,17 +117,21 @@ def main():
             igc2geojson.dump_to_geojson(output, global_thermals)
             print("GeoJson output to: {}".format(output))
 
+            # Dump info file
+            # Get current time in the right time-zone
+            tz = pytz.timezone('Europe/Paris')
+            script_start_time = datetime.now(tz)
+
+            run_metadata = RunMetadata()
+            meta_data = run_metadata.toJSON()
+
+
+
             # Dump Tracks
             if isDumpTrack:
                 tracks_filename = output + '_tracks'
                 igc2geojson.dump_tracks_to_file(tracks_filename, global_flights)
                 print("GeoJson output to: {}".format(tracks_filename))
-
-
-        # Dump to FTP
-        elif isOutputToFtp:
-            igc2geojson.dump_to_ftp(ftp_client,output, global_thermals)
-            print("GeoJson output to FTP: {}".format(ftp_client))
 
         # Dump to Google storage
         if isOutputToGoogleCloudStorage:

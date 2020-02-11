@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c7d8a499-cb80-42f1-807a-a8fa5c50e7e2</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>main_local.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -13,12 +13,15 @@
     <RootNamespace>github_igc_lib</RootNamespace>
     <IsWindowsApplication>True</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>D:\_Downloads\igc\2019_igc D:\_Downloads\igc\heatmap  --out-local-file --out-suffix-epoch --ftp-from-env --dump-track</CommandLineArguments>
+    <CommandLineArguments>D:\_Downloads\igc\2019_igc D:\_Downloads\igc\heatmap  --out-local-file --out-suffix-epoch</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <Environment>GOOGLE_APPLICATION_CREDENTIALS=C:\Users\l.launer\src\MapBox\Service_Account_Key-IgcHeatMap-4bca6050958e.json
-FTP_SERVER_NAME=localhost
-FTP_LOGIN=launerl
-FTP_PASSWORD=launerl</Environment>
+FTP_SERVER_NAME=ftp3.phpnet.org
+FTP_LOGIN=netcoupe_DG800ludo
+FTP_PASSWORD=SIx4m8nu_
+FTP_SERVER_NAME_IGC=95.215.226.140
+FTP_LOGIN_IGC=netcoupe_ludoigc
+FTP_PASSWORD_IGC=IGC2020Sw7qo</Environment>
     <InterpreterArguments>
     </InterpreterArguments>
   </PropertyGroup>
@@ -44,6 +47,9 @@ FTP_PASSWORD=launerl</Environment>
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="main_local.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="RunMetadata.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="test_igc_lib.py" />
