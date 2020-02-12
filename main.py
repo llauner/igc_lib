@@ -50,11 +50,13 @@ Main entry point for Google function
 def main(request):
 
     ### Parse request parameters
-    target_date = None
+    print(str(request))
 
-    target_date = request.args.get('day')
-    if target_date:
-        print("Request parameter: day={}".format(target_date))
+    #target_date = None
+
+    #target_date = request.args.get('day')
+    #if target_date:
+    #    print("Request parameter: day={}".format(target_date))
 
     global ftp_client_igc                       # FTP client to get IGC .zip files
     global ftp_client_out                       # FTP client to write .geojson outpout
