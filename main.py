@@ -167,6 +167,7 @@ def main(request):
         ### HACK: No idea why I can't reuse the same ftp connection to send the same file again with a different name !!
         ## Output to file with date prefix
 
+        ## Heatmap
         # Init FTP output client: yyyy_mm_dd-heatmap
         ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
         igc2geojson.dump_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename, global_thermals)
@@ -180,12 +181,13 @@ def main(request):
             print("GeoJson output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_latest)) 
             ftp_client_out.close()
 
+        ## Metadata
+        metadata = RunMetadata(target_date, script_start_time, script_end_time, flights_count, len(global_thermals))
+        json_metadata = metadata.toJSON()
         # Output run metadata information: latest-metadata.json
         if is_latest_processing:
             ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
             script_end_time = datetime.now(tz)
-            metadata = RunMetadata(target_date, script_start_time, script_end_time, flights_count, len(global_thermals))
-            json_metadata = metadata.toJSON()
             igc2geojson.dump_string_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_metadata_latest, json_metadata)
             print("Metadata JSON output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_metadata_latest))   
             ftp_client_out.close()
@@ -199,7 +201,7 @@ def main(request):
         print("No .zip file found")
 
    
-    return_message = "Script Start -> End time: {} -> {}".format(script_start_time, script_end_time)
+    return_message = json_metadata
     print(return_message)
 
     # Disconnect FTP
