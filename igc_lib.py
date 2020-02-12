@@ -668,6 +668,10 @@ class Flight:
 
     @staticmethod
     def create_from_zipfile(zip_file, config_class=FlightParsingConfig):
+        '''
+        Args:
+            target_date: files with a date != target_date will be discarded
+        '''
         config = config_class()
         fixes = []
         a_records = []
