@@ -48,9 +48,12 @@ def get_file_from_ftp(ftp_client, filename):
 Main entry point for Google function
 '''
 def main(request):
-
+    target_date = None
     ### Parse request parameters
+    print("request")
     print(str(request))
+    print("day")
+    print(request.args.get('day'))
 
     #target_date = None
 
