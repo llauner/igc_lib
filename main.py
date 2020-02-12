@@ -89,7 +89,7 @@ def main(request):
         is_latest_processing = False
     if 'catchUpOnDay' in request.args:
         catchup_on_day = int(request.args.get('catchUpOnDay'))
-        is_latest_processing = True if catchup_on_day == -1 and  script_start_time.hour < SWITCH_HOUR else False
+        is_latest_processing = True if abs(catchup_on_day) == 1 and  script_start_time.hour < SWITCH_HOUR else False
 
     # Find which date to process
     if target_date is None:
