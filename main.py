@@ -182,12 +182,12 @@ def main(request):
             ftp_client_out.close()
 
         ## Metadata
+        script_end_time = datetime.now(tz)
         metadata = RunMetadata(target_date, script_start_time, script_end_time, flights_count, len(global_thermals))
         json_metadata = metadata.toJSON()
         # Output run metadata information: latest-metadata.json
         if is_latest_processing:
             ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
-            script_end_time = datetime.now(tz)
             igc2geojson.dump_string_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_metadata_latest, json_metadata)
             print("Metadata JSON output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_metadata_latest))   
             ftp_client_out.close()
