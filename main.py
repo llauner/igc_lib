@@ -55,6 +55,13 @@ def main(request):
     print("day")
     print(request.args.get('day'))
 
+    if 'catchUp' in request.args:
+        print(request.args.get('catchUp'))
+    else:
+        print('NO catchup in args')
+        
+        
+
     #target_date = None
 
     #target_date = request.args.get('day')
