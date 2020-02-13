@@ -33,8 +33,7 @@ from pathlib2 import Path
 
 from collections import defaultdict
 
-import lib.viterbi as viterbi
-import lib.geo as geo
+from lib import viterbi, geo
 
 from datetime import date, time, timedelta
 
