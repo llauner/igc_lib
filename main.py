@@ -137,13 +137,15 @@ def main(request):
     ### Analyse files
     files_count = len(all_files)
     flights_count = 0
+    flight_date = None
     if all_files:
         for i,filename in enumerate(all_files):
             zip = get_file_from_ftp(ftp_client_igc, filename)
 
             with zipfile.ZipFile(zip) as zip_file:
                 flight = igc_lib.Flight.create_from_zipfile(zip_file)
-                flight_date = datetime.fromtimestamp(flight.date_timestamp).date()
+                if flight.date_timestamp:
+                    flight_date = datetime.fromtimestamp(flight.date_timestamp).date()
                
             if flight.valid and flight_date==target_date:
                 flights_count += 1

@@ -751,6 +751,7 @@ class Flight:
         self.fixes = fixes
         self.valid = True
         self.notes = []
+        self.date_timestamp = None
         if len(fixes) < self._config.min_fixes:
             self.notes.append(
                 "Error: This file has %d fixes, less than "
