@@ -16,19 +16,29 @@ FTP_HEATMAP_ROOT_DIRECTORY = "heatmap/geojson"
 SWITCH_HOUR = 17        # Switch hour for the processing. Before 17 = day -1. After 17 = Current day
 
 
-def get_file_names_from_ftp(ftp_client, target_date, forward_days_lookup):
+def get_file_names_from_ftp(ftp_client, target_date, relDaysLookup):
     '''
     Get filenames to be retrieved from FTP
     Args:
         ftp_client: a valid ftp client
         target_date: only files having this modified date will be retrieved
-        forward_days_lookup: number of days after the target_date to retrieve files from
+        relDaysLookup: number of days after/before the target_date to retrieve files from
     '''
     file_names = []
 
-    lookup_end_date = target_date
-    if forward_days_lookup:
-        lookup_end_date = target_date + timedelta(days=abs(forward_days_lookup))
+    lookup_date = target_date
+    search_start_date = target_date
+    search_end_date = target_date
+
+    if relDaysLookup:
+        lookup_date = target_date + timedelta(days=relDaysLookup)
+
+    if lookup_date > target_date:
+        search_start_date = target_date
+        search_end_date = lookup_date
+    else:
+        search_start_date = lookup_date
+        search_end_date = target_date
 
     files = ftp_client.mlsd()   # List files from FTP
 
@@ -38,7 +48,7 @@ def get_file_names_from_ftp(ftp_client, target_date, forward_days_lookup):
         timestamp = file[1]['modify']
         modified_date = parser.parse(timestamp).date()
         
-        if suffix == "zip" and (modified_date==target_date or (modified_date>target_date and modified_date<=lookup_end_date)):
+        if suffix == "zip" and (search_start_date <= modified_date and modified_date <= search_end_date):
             file_names.append(name)
        
     return file_names
@@ -72,31 +82,55 @@ def main(request):
 
     # ----------------------------- Parse request parameters -----------------------------
     target_date = None
-    catchup_on_day = None
+    relDaysLookup = None
+    catchupOnPreviousDay = False
+    dry_run = False
 
     
     ## HACK: This is used to debug localy
     #Request = type('Request', (object,), {})
     #request = Request()
-    ##request.args = {"day":"2020_02_09"}
-    #request.args = {"catchUpOnDay":"-1"}
-    ##request.args = {}
+    ##request.args = {"targetDate":"2020_02_09"}
+    ##request.args = {"dryRun": True, "targetDate":"2020_02_17", "relDaysLookup":1}
+    ##request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
+    ##request.args = {"dryRun": True, "catchupOnPreviousDay":True}               # As executed between midnight and 17:00 = Will generate map for the previous day with flights from previous + current day
+    #request.args = {}                                                           # As executed after 17:00 every day = Will generate map for the day with flights of the day
 
     # Parse request parameters
-    if 'day' in request.args:
-        day = request.args.get('day')
-        target_date = datetime.strptime(day, '%Y_%m_%d')
+    if 'targetDate' in request.args:
+        target_date = request.args.get('targetDate')
+        target_date = datetime.strptime(target_date, '%Y_%m_%d').date()
         is_latest_processing = False
-    if 'catchUpOnDay' in request.args:
-        catchup_on_day = int(request.args.get('catchUpOnDay'))
-        is_latest_processing = True if abs(catchup_on_day) == 1 and  script_start_time.hour < SWITCH_HOUR else False
 
-    # Find which date to process
+    if 'relDaysLookup' in request.args:
+        relDaysLookup = int(request.args.get('relDaysLookup'))
+
+    if 'relTargetDate' in request.args:
+        relTargetDate = int(request.args.get('relTargetDate'))
+        now = date(script_start_time.year, script_start_time.month, script_start_time.day)
+        target_date = now + timedelta(days=relTargetDate)
+        if relDaysLookup is None:
+            relDaysLookup = now - target_date
+            relDaysLookup = relDaysLookup.days
+
+    if 'catchupOnPreviousDay' in request.args:
+        catchupOnPreviousDay = bool(request.args.get('catchupOnPreviousDay'))
+        if script_start_time.hour < SWITCH_HOUR:
+            target_date = date(script_start_time.year, script_start_time.month, script_start_time.day)
+            target_date = target_date - timedelta(days=1)
+            relDaysLookup = 1
+            is_latest_processing = True
+
+
+    if 'dryRun' in request.args:
+        dry_run = True
+
+    # No target date : Find which date to process
     if target_date is None:
         target_date = date(script_start_time.year, script_start_time.month, script_start_time.day)
-        if script_start_time.hour < SWITCH_HOUR:
-            target_date = target_date - timedelta(days=1)
-    print("##### Launching processing for: target_date={} catchup_on_day={}".format(target_date, catchup_on_day))
+
+
+    print("##### Launching processing for: target_date={} relDaysLookup={} catchupOnPreviousDay={}".format(target_date, relDaysLookup, catchupOnPreviousDay))
         
     # ----------------------------- Begin processing -----------------------------      
     global ftp_client_igc                       # FTP client to get IGC .zip files
@@ -132,7 +166,7 @@ def main(request):
     ftp_client_igc = get_ftp_client(ftp_server_name_igc, ftp_login_igc, ftp_password_igc)
 
     # Get files to process
-    all_files = get_file_names_from_ftp(ftp_client_igc, target_date, catchup_on_day)
+    all_files = get_file_names_from_ftp(ftp_client_igc, target_date, relDaysLookup)
 
     ### Analyse files
     files_count = len(all_files)
@@ -169,19 +203,24 @@ def main(request):
         ### HACK: No idea why I can't reuse the same ftp connection to send the same file again with a different name !!
         ## Output to file with date prefix
 
+        if dry_run:
+            print("### Dry Run !!!!! ###")
         ## Heatmap
         # Init FTP output client: yyyy_mm_dd-heatmap
         ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
-        igc2geojson.dump_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename, global_thermals)
-        print("GeoJson output to FTP: {} -> {}.geojson".format(ftp_client_out.host, output_filename))   
+        if not dry_run:
+            igc2geojson.dump_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename, global_thermals)
         ftp_client_out.close()
+        print("GeoJson output to FTP: {} -> {}.geojson".format(ftp_client_out.host, output_filename))   
 
         # Init FTP output client: latest-heatmap
         if is_latest_processing:
+            
             ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
-            igc2geojson.dump_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_latest, global_thermals)
-            print("GeoJson output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_latest)) 
+            if not dry_run:
+                igc2geojson.dump_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_latest, global_thermals)
             ftp_client_out.close()
+            print("GeoJson output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_latest)) 
 
         ## Metadata
         script_end_time = datetime.now(tz)
@@ -190,17 +229,23 @@ def main(request):
         # Output run metadata information: latest-metadata.json
         if is_latest_processing:
             ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
-            igc2geojson.dump_string_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_metadata_latest, json_metadata)
-            print("Metadata JSON output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_metadata_latest))   
+            if not dry_run:
+                igc2geojson.dump_string_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_metadata_latest, json_metadata)
             ftp_client_out.close()
+            print("Metadata JSON output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_metadata_latest))   
 
         # Output run metadata information: yyyy_mm_dd-metadata.json
         ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
-        igc2geojson.dump_string_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_metadata, json_metadata)
+        if not dry_run:
+            igc2geojson.dump_string_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_metadata, json_metadata)
+        ftp_client_out.close()
         print("Metadata JSON output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_metadata))   
 
     else:
         print("No .zip file found")
+        script_end_time = datetime.now(tz)
+        metadata = RunMetadata(target_date, script_start_time, script_end_time, flights_count, len(global_thermals))
+        json_metadata = metadata.toJSON()
 
    
     return_message = json_metadata
@@ -208,8 +253,7 @@ def main(request):
 
     # Disconnect FTP
     ftp_client_igc.close()
-    ftp_client_out.close()
-
+   
     return return_message
 
 if __name__ == "__main__":
