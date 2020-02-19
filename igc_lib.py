@@ -666,6 +666,49 @@ class Flight:
         return flight
 
     @staticmethod
+    def create_from_bytesio(flight_file, config_class=FlightParsingConfig):
+        """Creates an instance of Flight from a given file.
+
+        Args:
+            file: the BytesIO igc file
+            config_class: a class that implements FlightParsingConfig
+
+        Returns:
+            An instance of Flight built from the supplied IGC file.
+        """
+        config = config_class()
+        fixes = []
+        a_records = []
+        i_records = []
+        h_records = []
+
+        for binary_line in flight_file:
+                line = binary_line.decode("ISO-8859-1")
+                line = line.replace('\n', '').replace('\r', '')
+                if not line:
+                    continue
+                if line[0] == 'A':
+                    a_records.append(line)
+                elif line[0] == 'B':
+                    fix = GNSSFix.build_from_B_record(line, index=len(fixes))
+                    if fix is not None:
+                        if fixes and math.fabs(fix.rawtime - fixes[-1].rawtime) < 1e-5:
+                            # The time did not change since the previous fix.
+                            # Ignore this fix.
+                            pass
+                        else:
+                            fixes.append(fix)
+                elif line[0] == 'I':
+                    i_records.append(line)
+                elif line[0] == 'H':
+                    h_records.append(line)
+                else:
+                    # Do not parse any other types of IGC records
+                    pass
+        flight = Flight(fixes, a_records, h_records, i_records, config)
+        return flight
+
+    @staticmethod
     def create_from_zipfile(zip_file, config_class=FlightParsingConfig):
         '''
         Args:
