@@ -71,8 +71,13 @@ def get_geojson_track_collection_full(list_flights):
             lon1 = flight.fixes[i].lon
             lat2 = flight.fixes[i+1].lat
             lon2 = flight.fixes[i+1].lon
+
+            alt = flight.fixes[i].alt       # Altitude
+            ts =  flight.fixes[i].timestamp # Timestamp
+
             json_line=gjson.LineString([(lon1, lat1),(lon2, lat2)])
-            tracks.append(gjson.Feature(geometry=json_line))
+            tracks.append(gjson.Feature(geometry=json_line, properties={"alt": alt, 
+                                                                       "ts": ts}))
     feature_collection = gjson.FeatureCollection(tracks)
     return feature_collection
 
