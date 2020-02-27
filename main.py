@@ -109,6 +109,7 @@ def main(request):
         relTargetDate = int(request.args.get('relTargetDate'))
         now = date(script_start_time.year, script_start_time.month, script_start_time.day)
         target_date = now + timedelta(days=relTargetDate)
+        is_latest_processing = False
         if relDaysLookup is None:
             relDaysLookup = now - target_date
             relDaysLookup = relDaysLookup.days
