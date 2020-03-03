@@ -92,9 +92,9 @@ def main(request):
     #request = Request()
     ##request.args = {"targetDate":"2020_02_09"}
     ##request.args = {"dryRun": True, "targetDate":"2020_02_17", "relDaysLookup":1}
-    ##request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
+    #request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
     ##request.args = {"dryRun": True, "catchupOnPreviousDay":True}               # As executed between midnight and 17:00 = Will generate map for the previous day with flights from previous + current day
-    #request.args = {}                                                           # As executed after 17:00 every day = Will generate map for the day with flights of the day
+    ##request.args = {}                                                           # As executed after 17:00 every day = Will generate map for the day with flights of the day
 
     # Parse request parameters
     if 'targetDate' in request.args:
@@ -221,7 +221,7 @@ def main(request):
             if not dry_run:
                 igc2geojson.dump_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_latest, global_thermals)
             ftp_client_out.close()
-            print("GeoJson output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_latest)) 
+            print("GeoJson output to FTP: {} -> {}".format(ftp_client_out.host, output_filename_latest)) 
 
         ## Metadata
         script_end_time = datetime.now(tz)
@@ -233,14 +233,14 @@ def main(request):
             if not dry_run:
                 igc2geojson.dump_string_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_metadata_latest, json_metadata)
             ftp_client_out.close()
-            print("Metadata JSON output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_metadata_latest))   
+            print("Metadata JSON output to FTP: {} -> {}".format(ftp_client_out.host, output_filename_metadata_latest))   
 
         # Output run metadata information: yyyy_mm_dd-metadata.json
         ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
         if not dry_run:
             igc2geojson.dump_string_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_metadata, json_metadata)
         ftp_client_out.close()
-        print("Metadata JSON output to FTP: {} -> {}.json".format(ftp_client_out.host, output_filename_metadata))   
+        print("Metadata JSON output to FTP: {} -> {}".format(ftp_client_out.host, output_filename_metadata))   
 
     else:
         print("No .zip file found")
