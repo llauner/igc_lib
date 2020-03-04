@@ -90,9 +90,9 @@ def main(request):
     ## HACK: This is used to debug localy
     #Request = type('Request', (object,), {})
     #request = Request()
-    ##request.args = {"targetDate":"2020_02_09"}
+    #request.args = {"dryRun": True, "targetDate":"2020_02_12"}
     ##request.args = {"dryRun": True, "targetDate":"2020_02_17", "relDaysLookup":1}
-    #request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
+    ##request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
     ##request.args = {"dryRun": True, "catchupOnPreviousDay":True}               # As executed between midnight and 17:00 = Will generate map for the previous day with flights from previous + current day
     ##request.args = {}                                                           # As executed after 17:00 every day = Will generate map for the day with flights of the day
 
@@ -216,7 +216,6 @@ def main(request):
 
         # Init FTP output client: latest-heatmap
         if is_latest_processing:
-            
             ftp_client_out = get_ftp_client(ftp_server_name, ftp_login, ftp_password)
             if not dry_run:
                 igc2geojson.dump_to_ftp(ftp_client_out, FTP_HEATMAP_ROOT_DIRECTORY, output_filename_latest, global_thermals)

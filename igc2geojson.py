@@ -55,10 +55,12 @@ def get_geojson_feature_collection(list_thermals):
         lon = thermal.enter_fix.lon
         vario = round(thermal.vertical_velocity(),2)
         altitude_enter = int(thermal.enter_fix.press_alt)
+        ts = thermal.enter_fix.timestamp;
 
         json_point=gjson.Point((lon, lat, altitude_enter))
         features.append(gjson.Feature(geometry=json_point, properties={"vario": vario, 
-                                                                       "alt_in": altitude_enter}))
+                                                                       "alt_in": altitude_enter,
+                                                                       "ts": ts}))
 
     feature_collection = gjson.FeatureCollection(features)
     return feature_collection
@@ -139,6 +141,22 @@ def dump_to_ftp(ftp_client, output_directory, output_filename,list_thermals):
     # Dump to FTP
     return_code = ftp_client.storbinary('STOR ' + output_filename, content_as_bytes)
     return return_code
+
+def dump_thermals_to_file(output_filename,list_thermals):
+    # Dump thermals
+    feature_collection = get_geojson_feature_collection(list_thermals)
+    geojson_file_content = str(feature_collection)
+
+    #content_as_bytes = BytesIO(bytes(geojson_file_content,encoding='utf-8'))
+    output_filename = '{}.geojson'.format(output_filename)
+
+    #Write output: Tracks
+    with open('{}.geojson'.format(output_filename), 'w') as f:
+        gjson.dump(feature_collection, f)
+    
+    script_time = datetime.now()
+    print("dump_tracks_to_file: end={}".format(script_time))
+
 
 def dump_string_to_ftp(ftp_client, output_directory, output_filename, string_content):
     content_as_bytes = BytesIO(bytes(string_content,encoding='utf-8'))

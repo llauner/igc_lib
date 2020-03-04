@@ -337,7 +337,7 @@ class GNSSFix:
             self.alt = self.gnss_alt
         else:
             assert(False)
-        self.timestamp = self.rawtime + flight.date_timestamp
+        self.timestamp = int(self.rawtime + flight.date_timestamp)
 
     def __repr__(self):
         return self.__str__()
