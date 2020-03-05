@@ -65,7 +65,7 @@ def get_geojson_feature_collection(list_thermals):
     feature_collection = gjson.FeatureCollection(features)
     return feature_collection
 
-def get_geojson_track_collection_full(list_flights):
+def get_geojson_track_collection_full(list_flights, isIncludeProperties=True):
     tracks = []
     for flight in list_flights:
         for i in range(0, len(flight.fixes)-2):
@@ -78,8 +78,13 @@ def get_geojson_track_collection_full(list_flights):
             ts =  flight.fixes[i].timestamp # Timestamp
 
             json_line=gjson.LineString([(lon1, lat1),(lon2, lat2)])
-            tracks.append(gjson.Feature(geometry=json_line, properties={"alt": alt, 
-                                                                       "ts": ts}))
+
+            if isIncludeProperties:
+                tracks.append(gjson.Feature(geometry=json_line, properties={"alt": alt, 
+                                                                            "ts": ts}))
+            else:
+                 tracks.append(gjson.Feature(geometry=json_line))
+
     feature_collection = gjson.FeatureCollection(tracks)
     return feature_collection
 

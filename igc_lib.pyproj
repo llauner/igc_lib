@@ -35,6 +35,12 @@ FTP_PASSWORD_IGC=IGC2020Sw7qo</Environment>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="CumulativeTrackBuilder.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FtpHelper.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="igc_lib.py" />
     <Compile Include="igc2geojson.py" />
     <Compile Include="lib\dumpers.py" />
@@ -45,6 +51,9 @@ FTP_PASSWORD_IGC=IGC2020Sw7qo</Environment>
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="main_local.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ProcessingType.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="RunMetadata.py">
