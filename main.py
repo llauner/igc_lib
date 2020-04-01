@@ -50,15 +50,15 @@ def main(request):
     target_year = None
     cumulativeTrackBuilder = None
 
-  
-    ## HACK: This is used to debug localy
-    #Request = type('Request', (object,), {})
-    #request = Request()
-    ##request.args = {"dryRun": False, "isTrack": True, "targetYear":"2020"}
-    ##request.args = {"dryRun": True, "targetDate":"2020_02_17", "relDaysLookup":1}
+
+    # HACK: This is used to debug localy
+    Request = type('Request', (object,), {})
+    request = Request()
+    request.args = {"dryRun": False, "isTrack": True, "targetYear":"2020"}
+    #request.args = {"dryRun": True, "targetDate":"2020_02_17", "relDaysLookup":1}
     #request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
-    ##request.args = {"dryRun": True, "catchupOnPreviousDay":True}               # As executed between midnight and 17:00 = Will generate map for the previous day with flights from previous + current day
-    ##request.args = {}                                                           # As executed after 17:00 every day = Will generate map for the day with flights of the day
+    #request.args = {"dryRun": True, "catchupOnPreviousDay":True}               # As executed between midnight and 17:00 = Will generate map for the previous day with flights from previous + current day
+    #request.args = {}                                                           # As executed after 17:00 every day = Will generate map for the day with flights of the day
 
     # Parse request parameters
     # ----- Heatmap -----
@@ -141,7 +141,7 @@ def main(request):
     # ---------------------------------------------------- Heatmap ----------------------------------------------
     if processingType == ProcessingType.HeatMap:
 
-         # Get files to process
+        # Get files to process
         all_files = FtpHelper.get_file_names_from_ftp(ftp_client_igc, target_date, relDaysLookup)
 
         ### Analyse files
@@ -157,16 +157,15 @@ def main(request):
                     flight = igc_lib.Flight.create_from_zipfile(zip_file)
                     if flight.date_timestamp:
                         flight_date = datetime.fromtimestamp(flight.date_timestamp).date()
-               
+
                 if flight.valid and flight_date==target_date:
                     flights_count += 1
                     global_thermals.extend(flight.thermals)
                     global_glides.extend(flight.glides)
                     #print("{}/{} :{} -> {} \t Thermals#={}".format(i+1,files_count, filename, zip_file.filelist[0].filename, len(flight.thermals)))
                 else:
-                     print("{}/{} :{} -> {} \t Discarded ! valid={} date={}".format(i+1,files_count, filename, zip_file.filelist[0].filename, flight.valid, flight_date))
+                    print("{}/{} :{} -> {} \t Discarded ! valid={} date={}".format(i+1,files_count, filename, zip_file.filelist[0].filename, flight.valid, flight_date))
 
-      
             # Dump to Google storage
             if isOutputToGoogleCloudStorage:
                 # Output to file with date prefix
@@ -224,26 +223,33 @@ def main(request):
             jsonMetadata = metadata.toJSON()
     # ---------------------------------------------------- Cumulative Track ----------------------------------------------
     else:
+        # Metadata
+        metadata = RunMetadata(target_date, script_start_time, None, 0, 0)
+        
+        # --- Start the process
         ftp_client_out = FtpHelper.get_ftp_client(ftp_server_name, ftp_login, ftp_password)
 
-        cumulativeTrackBuilder = CumulativeTrackBuilder(ftp_client_igc, ftp_client_out, target_year, dry_run)
+        cumulativeTrackBuilder = CumulativeTrackBuilder(metadata, ftp_client_igc, ftp_client_out, target_year, True, dry_run)
         target_date = cumulativeTrackBuilder.targetDate
         relDaysLookup = cumulativeTrackBuilder.relDaysLookup
 
         # Get files to process
-        all_files = FtpHelper.get_file_names_from_ftp(ftp_client_igc, target_date, relDaysLookup)
+        if not cumulativeTrackBuilder.useLocalDirectory:
+            all_files = FtpHelper.get_file_names_from_ftp(ftp_client_igc, target_date, relDaysLookup)
+        else:
+            all_files = FtpHelper.getFIlenamesFromLocalFolder()
 
         # Run !
         cumulativeTrackBuilder.run(all_files)
         jsonMetadata = cumulativeTrackBuilder.jsonMetadata
 
-   
+
     return_message = jsonMetadata
     print(return_message)
 
     # Disconnect FTP
     ftp_client_igc.close()
-   
+
     return return_message 
 
 if __name__ == "__main__":

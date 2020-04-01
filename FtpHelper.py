@@ -1,11 +1,15 @@
 
 import ftplib
 import pathlib
+import os
+import zipfile
 
 from io import BytesIO
 
 from datetime import datetime, date, time, timedelta
 from dateutil import parser
+
+LOCAL_IGC_DIRECTORY = "/Users/llauner/Downloads/igc/Netcoupe/"
 
 
 class FtpHelper():
@@ -45,7 +49,7 @@ class FtpHelper():
         
             if suffix == "zip" and (search_start_date <= modified_date and modified_date <= search_end_date):
                 file_names.append(name)
-       
+
         return file_names
 
     @staticmethod
@@ -58,3 +62,28 @@ class FtpHelper():
         r = BytesIO()
         ftp_client.retrbinary('RETR ' + filename, r.write)
         return r
+    
+    # ---------------------------- Local directory -------------------------
+    @staticmethod
+    def getFIlenamesFromLocalFolder():
+        files = []
+        # r=root, d=directories, f = files
+        for r, d, f in os.walk(LOCAL_IGC_DIRECTORY):
+            for file in f:
+                if '.igc' in file:
+                    files.append(os.path.join(r, file))
+        return files
+    
+    # ------------------------ Utility ------------------------------------
+    @staticmethod
+    def leechFilesFromFtp(ftp_client, target_date, relDaysLookup):
+        allFiles = FtpHelper.get_file_names_from_ftp(ftp_client, target_date, relDaysLookup)
+        
+        if allFiles:
+            for i,filename in enumerate(allFiles):
+                computedFileName = None
+                # ----- File from FTP -----
+                zip = FtpHelper.get_file_from_ftp(ftp_client, filename)
+                with zipfile.ZipFile(zip) as zip_file:
+                    zip_file.extractall("/Users/llauner/Downloads/igc/2020")
+    
