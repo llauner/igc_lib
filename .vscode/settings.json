@@ -9,6 +9,6 @@
     "python.testing.pytestEnabled": false,
     "python.testing.nosetestsEnabled": false,
     "python.testing.unittestEnabled": false,
-    "python.pythonPath": "/usr/local/bin/python3",
+    "python.pythonPath": ".igc_lib-env/bin/python",
     "python.testing.promptToConfigure": false
 }
