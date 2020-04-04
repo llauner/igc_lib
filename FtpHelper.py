@@ -13,6 +13,14 @@ LOCAL_IGC_DIRECTORY = "/Users/llauner/Downloads/igc/Netcoupe/"
 
 
 class FtpHelper():
+    
+    def __init__(self, host, login, password):
+        self.host = host
+        self.login = login
+        self.password = password
+        
+    def getFtpClient(self):
+        return FtpHelper.get_ftp_client(self.host, self.login, self.password)
 
     @staticmethod
     def get_file_names_from_ftp(ftp_client, target_date, relDaysLookup):
@@ -63,6 +71,29 @@ class FtpHelper():
         ftp_client.retrbinary('RETR ' + filename, r.write)
         return r
     
+    @staticmethod
+    def dumpFileToFtp(ftp_client, output_directory, output_filename, fileObject):
+        content_as_bytes = fileObject
+
+        # cd to directory
+        if output_directory:
+            ftp_client.cwd(output_directory)
+
+        # Dump to FTP
+        return_code = ftp_client.storbinary('STOR ' + output_filename, content_as_bytes)
+        return return_code
+    
+    @staticmethod
+    def dumpStringToFTP(ftp_client, output_directory, output_filename, string_content):
+        content_as_bytes = BytesIO(bytes(string_content,encoding='utf-8'))
+
+        # cd to directory
+        if output_directory:
+            ftp_client.cwd(output_directory)
+
+        # Dump to FTP
+        return_code = ftp_client.storbinary('STOR ' + output_filename, content_as_bytes)
+        return return_code
     # ---------------------------- Local directory -------------------------
     @staticmethod
     def getFIlenamesFromLocalFolder():

@@ -13,7 +13,7 @@ import sys
 from RunMetadata import RunMetadata
 from CumulativeTrackBuilder import *
 from ProcessingType import *
-from FtpHelper import *
+from FtpHelper import FtpHelper
 
 FTP_HEATMAP_ROOT_DIRECTORY = "heatmap/geojson"
 SWITCH_HOUR = 17        # Switch hour for the processing. Before 17 = day -1. After 17 = Current day
@@ -223,29 +223,17 @@ def main(request):
             jsonMetadata = metadata.toJSON()
     # ---------------------------------------------------- Cumulative Track ----------------------------------------------
     else:
-        # Metadata
-        metadata = RunMetadata(target_date, script_start_time, None, 0, 0)
-        
         # --- Start the process
         ftp_client_out = FtpHelper.get_ftp_client(ftp_server_name, ftp_login, ftp_password)
 
-        cumulativeTrackBuilder = CumulativeTrackBuilder(metadata, ftp_client_igc, ftp_client_out, target_year, True, dry_run)
-        target_date = cumulativeTrackBuilder.targetDate
-        relDaysLookup = cumulativeTrackBuilder.relDaysLookup
-
-        # Get files to process
-        if not cumulativeTrackBuilder.useLocalDirectory:
-            all_files = FtpHelper.get_file_names_from_ftp(ftp_client_igc, target_date, relDaysLookup)
-        else:
-            all_files = FtpHelper.getFIlenamesFromLocalFolder()
+        cumulativeTrackBuilder = CumulativeTrackBuilder(ftp_client_igc, ftp_client_out, target_year, useLocalDirectory=True, isOutToLocalFiles=True)
 
         # Run !
-        cumulativeTrackBuilder.run(all_files)
-        jsonMetadata = cumulativeTrackBuilder.jsonMetadata
+        cumulativeTrackBuilder.run()
+        jsonMetadata = cumulativeTrackBuilder.JsonMetaData()
 
 
     return_message = jsonMetadata
-    print(return_message)
 
     # Disconnect FTP
     ftp_client_igc.close()
@@ -253,6 +241,9 @@ def main(request):
     return return_message 
 
 if __name__ == "__main__":
-    main(None)
-    exit()
-
+    try:
+        res = main(None)
+        print(res)
+    except SystemExit as e:
+        if not e is None:
+            print(e)

@@ -5,60 +5,96 @@ import zipfile
 import igc_lib
 import igc2geojson
 import numpy as np
-from PIL import Image, ImageDraw
-import pyproj
-import math
 
 import io
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from shapely.geometry import Point, LineString, Polygon
+import geopandas as gpd
+from geopandas import GeoDataFrame, GeoSeries
+import pandas as pd
+import mplleaflet
+from progress.bar import Bar
 
 from FtpHelper import *
 from RunMetadata import RunMetadata
 
-MAP_WIDTH = 1000
-MAP_HEIGHT = 800
-
-P = pyproj.Proj(proj='utm', zone=31, ellps='WGS84', preserve_units=True)
-    
-def LatLon_To_XY(Lat,Lon):
-    return P(Lat,Lon)  
-
 class CumulativeTrackBuilder:
-
-    FTP_TRACKS_ROOT_DIRECTORY = "tracemap/track"
     
-    FRANCE_BOUNDING_BOX = [(-6.566734,51.722775), (10.645924,51.726922), (10.625153,42.342052), (-6.673679,42.318955)]
 
-    def __init__(self, metaData, ftpClientIgc, ftpClientOut, targetYear, useLocalDirectory=False, isDryRun=False):
-        self.metaData = metaData
+
+    # --- Files dans folders ---
+    FTP_TRACKS_ROOT_DIRECTORY = "tracemap/tracks/"
+    TRACKS_IMAGE_FILE_NAME = "latest-tracks.png"
+    TRACKS_METADATA_FILE_NAME = "latest-tracks-metadata.json"
+    TRACKS_LOCAL_DUMP_DIRECTORY = "/Users/llauner/Downloads/"
+    
+    # --- Geo information ---
+    FRANCE_BOUNDING_BOX = [(-6.566734,51.722775), (10.645924,51.726922), (10.625153,42.342052), (-6.673679,42.318955)]
+    
+    # --- Iamge settings ---
+    IMAGE_DPI = 300
+    IMAGE_SIZE=(20,20)
+    LINE_WIDTH = 0.3
+    
+    # --- Dev and Debug ---
+    NB_FILES_TO_KEEP = None
+    
+
+    def __init__(self, ftpClientIgc, ftpClientOut, targetYear = None, useLocalDirectory=False, isOutToLocalFiles=False):
+        self.metaData = RunMetadata()
         self.ftpClientIgc = ftpClientIgc
         self.ftpClientOut = ftpClientOut
-        self.targetYear = targetYear
+        self.targetYear = datetime.now().year if targetYear is None else targetYear
         self.useLocalDirectory = useLocalDirectory
-        self.isDryRun = isDryRun
+        self.isOutToLocalFiles = isOutToLocalFiles
 
+        self.fileList = []
         self.flightsCount = None
-        self.jsonMetadata = None
+        
+        self.progressMessage = None
         
         # Compute targetDate
-        self.targetDate = date(targetYear,1,1)     # Start on January 1st
+        self.targetDate = date(self.targetYear,1,1)     # Start on January 1st
         self.relDaysLookup = 365                   # All year
+        
+        self.franceBoundingBox = Polygon(self.FRANCE_BOUNDING_BOX)
+        
+        # --- Setup plot ---
+        mpl.rcParams['savefig.pad_inches'] = 0
+        mpl.use('agg') 
+        figsize = None
+        fig = plt.figure(figsize=figsize)
+        self.axes = plt.axes([0,0,1,1], frameon=False)
+        self.axes.get_xaxis().set_visible(False)
+        self.axes.get_yaxis().set_visible(False)
+        plt.autoscale(tight=True)
 
-    
-    def run(self, allFiles):
-        self.flightsCount = len(allFiles)
+    def run(self):
+        if not self.useLocalDirectory:
+            allFiles = FtpHelper.get_file_names_from_ftp(self.ftpClientIgc, self.targetDate, self.relDaysLookup)
+        else:
+            allFiles = FtpHelper.getFIlenamesFromLocalFolder()
+        self.fileList = allFiles
+        self._run(self.fileList)
+        
+        return self.metaData
+        
+    def _run(self, allFiles):
+        self.fileList = allFiles
+        self.metaData.flightsCount = len(allFiles)
 
-        flights = []
-
-        # ########## HACK !!!!
-        # Take only a few flights during dev...
-        #del allFiles[10 : len(allFiles)]
+        # DEv or Debug: Take only a few flights during dev...
+        if CumulativeTrackBuilder.NB_FILES_TO_KEEP:
+            del allFiles[CumulativeTrackBuilder.NB_FILES_TO_KEEP : len(allFiles)]
 
         # --- Process files to get flights
         if allFiles:
+            progressBar = CumulativeTrackBuilder.SlowBar('Processing', max=self.metaData.flightsCount)
+            
             for i,filename in enumerate(allFiles):
+                
                 computedFileName = None
                 flight = None
                 # ----- File from FTP -----
@@ -71,82 +107,69 @@ class CumulativeTrackBuilder:
                         
                 # ----- File from local directory -----
                 else:
-                    computedFileName = "OK"
                     flight = igc_lib.Flight.create_from_file(filename)
                         
                 if flight.date_timestamp:
                         flight_date = datetime.fromtimestamp(flight.date_timestamp).date()
+                # --- Build progress message and update       
                 if flight.valid and flight_date:
-                    flights.append(flight)
-                    print("{}/{} :{} -> {}".format(i+1,self.flightsCount, filename, computedFileName))
+                    if computedFileName:
+                        progressBar.progressMessage = "{} -> {}".format(filename, computedFileName)
+                    else:
+                        progressBar.progressMessage = "{}".format(filename)
                 else:
-                    print("{}/{} :{} -> {} \t Discarded ! valid={}".format(i+1,self.flightsCount, filename, computedFileName, flight.valid))
+                    if computedFileName:
+                        progressBar.progressMessage = "{} -> {} \t Discarded ! valid={}".format(filename, computedFileName, flight.valid)
+                    else:
+                        progressBar.progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
+                progressBar.next()  # Update Progress
 
-            self.dumpFlightsToImage(flights)
+                # ----- Process flight -----
+                self.dumpFlightsToImage(flight)
+            
+            progressBar.finish()    # End Progress
+                
+            # --- Save bounding box ---
+            self.metaData.boundingBoxUpperLeft = [self.axes.dataLim.extents[1], self.axes.dataLim.extents[0]]
+            self.metaData.boundingBoxLowerRight = [self.axes.dataLim.extents[3], self.axes.dataLim.extents[2]]
+            
+        if self.isOutToLocalFiles:      # Dump to local files
+            self._dumpToFiles()    
+        else:                           # Dump to FTP
+            self._dumpToFtp()
         
-        
-    def dumpFlightsToImage(self, listFlights):
-        from shapely.geometry import Point, LineString, Polygon
-        import geopandas as gpd
-        from geopandas import GeoDataFrame, GeoSeries
-        import pandas as pd
-        
-        import mplleaflet
-        
+    def dumpFlightsToImage(self, flight):
         lons = np.vectorize(lambda f: f.lon)
         lats = np.vectorize(lambda f: f.lat)
-        
-        
-        franceBoundingBox = Polygon(self.FRANCE_BOUNDING_BOX)
-        
-        axes = None
-        # --- Setup plot ---
-        mpl.rcParams['savefig.pad_inches'] = 0
-        figsize = None
-        fig = plt.figure(figsize=figsize)
-        ax = plt.axes([0,0,1,1], frameon=False)
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-        plt.autoscale(tight=True)
-        
-        # --- Browse and plot files ---
-        for i,flight in enumerate(listFlights):
-            longitudes = lons(flight.fixes)
-            latitudes = lats(flight.fixes)
-            flightPoints = list(zip(longitudes.tolist(), latitudes.tolist()))
-        
-            flightLineString = LineString(flightPoints)
-            geoSeries = GeoSeries(flightLineString)
-            
-            # Check that the flight is inside the France polygon
-            isInsindeFrance = franceBoundingBox.contains(flightLineString)
-            
-            if isInsindeFrance:
-                if i==0:
-                    axes = geoSeries.plot(ax=ax, figsize=(20,20), linewidth=0.5)
-                else:
-                    axes = geoSeries.plot(ax=axes, linewidth=0.5)
-            
-            else:
-                print("Discarded: not inside France !")
-        
-        self.metaData.boundingBoxUpperLeft = [ax.dataLim.extents[1], ax.dataLim.extents[0]]
-        self.metaData.boundingBoxLowerRight = [ax.dataLim.extents[3], ax.dataLim.extents[2]]
-        
-        print(self.metaData.boundingBoxUpperLeft)
-        print(self.metaData.boundingBoxLowerRight)
-        
-        self._dumpToLocalFiles()
-        
-        print("ok")
-        
 
-    def _dumpToLocalFiles(self):
+        # --- Browse and plot files ---
+        longitudes = lons(flight.fixes)
+        latitudes = lats(flight.fixes)
+        flightPoints = list(zip(longitudes.tolist(), latitudes.tolist()))
+    
+        flightLineString = LineString(flightPoints)
+        geoSeries = GeoSeries(flightLineString)
+        
+        # Check that the flight is inside the France polygon
+        isInsindeFrance = self.franceBoundingBox.contains(flightLineString)
+        
+        if isInsindeFrance:
+                self.axes = geoSeries.plot(ax=self.axes, 
+                                            figsize=CumulativeTrackBuilder.IMAGE_SIZE, 
+                                            linewidth=CumulativeTrackBuilder.LINE_WIDTH)
+
+    def _dumpToFiles(self, fileObject=None):
         # Dump to HTML (results in a very large file)
         #mplleaflet.show(path='/Users/llauner/Downloads/latest-tracks.html')
-
+        
+        imageFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
+        metadataFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
+        
         # Dump image
-        plt.savefig('/Users/llauner/Downloads/latest-tracks.png', format='png', dpi=200, transparent=True, bbox_inches='tight', pad_inches=0)
+        if fileObject is None:      # Local file
+            plt.savefig(imageFullFileName, format='png', dpi=CumulativeTrackBuilder.IMAGE_DPI, transparent=True, bbox_inches='tight',pad_inches=0)
+        else:                       # File object
+            plt.savefig(fileObject, format='png', dpi=CumulativeTrackBuilder.IMAGE_DPI, transparent=True, bbox_inches='tight',pad_inches=0)
         plt.close()
         
         # Build metadata
@@ -154,28 +177,54 @@ class CumulativeTrackBuilder:
         self.metaData.setEndTime(datetime.now(tz))
         
         # Dump MetaData
-        self.jsonMetadata = self.metaData.toJSON()
-        with open('/Users/llauner/Downloads/latest-tracks-metadata.json', 'w') as jsonOut:
-            jsonOut.write(self.jsonMetadata)
+        if fileObject is None:      # Local file
+            with open(metadataFullFileName, 'w') as jsonOut:
+                jsonOut.write(self.JsonMetaData())
 
 
-    def _dumpToFtp(self, featureCollection, metadata):
-        # Tracks
-        tracksFilename = f"{self.targetYear}-tracks.geojson"
-        jsonTracks = str(featureCollection)
-
-        # Meta-data
-        metadataFilename = f"{self.targetYear}-tracks-metadata.json"
-        self.jsonMetadata = metadata.toJSON()
+    def _dumpToFtp(self):
+        imageFullFileName =  CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
+        metadataFullFileName = CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
         
         # Dump to FTP
-        if not self.isDryRun:
-            igc2geojson.dump_string_to_ftp(self.ftpClientOut, CumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY, tracksFilename, jsonTracks)
-        else:
-            geojsonFileContent = str(featureCollection)
-            print(featureCollection)
-            print(jsonMetadata)
+        self.ftpClientOut = self.ftpClientOut.getFtpClient()
+        # image
+        fileBuffer = io.BytesIO()
+        self._dumpToFiles(fileBuffer)
+        fileBuffer.seek(0)
+        
+        print(f"Dump to FTP: {self.ftpClientOut.host} ->{imageFullFileName}")
+        FtpHelper.dumpFileToFtp(self.ftpClientOut, 
+                                        CumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY, 
+                                        imageFullFileName, 
+                                        fileBuffer)
+        fileBuffer.close()
+        
+        # metadata
+        print(f"Dump to FTP: {self.ftpClientOut.host} ->{metadataFullFileName}")
+        FtpHelper.dumpStringToFTP(self.ftpClientOut, 
+                                        None, 
+                                        metadataFullFileName, 
+                                        self.JsonMetaData())
+        
+        # Print result so that it's logged
+        print (self.JsonMetaData())
 
 
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
+    
+    def JsonMetaData(self):
+        return self.metaData.toJSON()
+    
+# *******************************************************************************************
+    class SlowBar(Bar):
+        suffix='%(percent)d%% - %(index)d/%(max)d : %(currentMessage)s'
+        @property
+        def currentMessage(self):
+            return self.progressMessage
+        
+        def __init__(self, *args, **kwargs):
+            super(CumulativeTrackBuilder.SlowBar, self).__init__(*args, **kwargs)
+            self.progressMessage = None
+# *******************************************************************************************
