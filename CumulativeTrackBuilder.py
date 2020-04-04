@@ -61,6 +61,8 @@ class CumulativeTrackBuilder:
         
         self.franceBoundingBox = Polygon(self.FRANCE_BOUNDING_BOX)
         
+        self.isRunningInCloud = not (self.useLocalDirectory and self.isOutToLocalFiles)
+        
         # --- Setup plot ---
         mpl.rcParams['savefig.pad_inches'] = 0
         mpl.use('agg') 
@@ -122,7 +124,11 @@ class CumulativeTrackBuilder:
                         progressBar.progressMessage = "{} -> {} \t Discarded ! valid={}".format(filename, computedFileName, flight.valid)
                     else:
                         progressBar.progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
-                progressBar.next()  # Update Progress
+
+                if self.isRunningInCloud:           # ProgressBar does not work in gcloud: pring on stdout
+                    print(progressBar.getLine())
+                else:
+                    progressBar.next()  # Update Progress
 
                 # ----- Process flight -----
                 self.dumpFlightsToImage(flight)
@@ -227,4 +233,15 @@ class CumulativeTrackBuilder:
         def __init__(self, *args, **kwargs):
             super(CumulativeTrackBuilder.SlowBar, self).__init__(*args, **kwargs)
             self.progressMessage = None
+            
+        def getLine(self):
+            filled_length = int(self.width * self.progress)
+            empty_length = self.width - filled_length
+
+            message = self.message % self
+            bar = self.fill * filled_length
+            empty = self.empty_fill * empty_length
+            suffix = self.suffix % self
+            line = ''.join([message, self.bar_prefix, bar, empty, self.bar_suffix, suffix])
+            return line
 # *******************************************************************************************
