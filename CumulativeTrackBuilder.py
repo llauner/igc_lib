@@ -34,14 +34,13 @@ class CumulativeTrackBuilder:
     FRANCE_BOUNDING_BOX = [(-6.566734,51.722775), (10.645924,51.726922), (10.625153,42.342052), (-6.673679,42.318955)]
     
     # --- Iamge settings ---
-    IMAGE_DPI = 300
-    IMAGE_SIZE=(20,20)
-    LINE_WIDTH = 0.3
+    IMAGE_DPI = 1800
+    #IMAGE_SIZE=(20,20)
+    LINE_WIDTH = 0.05
     
     # --- Dev and Debug ---
     NB_FILES_TO_KEEP = None
     
-
     def __init__(self, ftpClientIgc, ftpClientOut, targetYear = None, useLocalDirectory=False, isOutToLocalFiles=False):
         self.metaData = RunMetadata()
         self.ftpClientIgc = ftpClientIgc
@@ -89,7 +88,7 @@ class CumulativeTrackBuilder:
 
         # DEv or Debug: Take only a few flights during dev...
         if CumulativeTrackBuilder.NB_FILES_TO_KEEP:
-            del allFiles[CumulativeTrackBuilder.NB_FILES_TO_KEEP : len(allFiles)]
+            del allFiles[0 : len(allFiles)-CumulativeTrackBuilder.NB_FILES_TO_KEEP]
 
         # --- Process files to get flights
         if allFiles:
@@ -156,12 +155,20 @@ class CumulativeTrackBuilder:
         flightLineString = LineString(flightPoints)
         geoSeries = GeoSeries(flightLineString)
         
+        # ----- Filter -----
+        isFlightOK = True
+        # Check that the flight time is > 45 min
+        isDurationOk = flight.duration/60 >=45
+        isFlightOK = isFlightOK and isDurationOk
         # Check that the flight is inside the France polygon
-        isInsindeFrance = self.franceBoundingBox.contains(flightLineString)
+        if isFlightOK:
+            isInsindeFrance = self.franceBoundingBox.contains(flightLineString)
+            isFlightOK = isFlightOK and isInsindeFrance
         
-        if isInsindeFrance:
+        if isFlightOK:
+                self.metaData.processedFlightsCount += 1
                 self.axes = geoSeries.plot(ax=self.axes, 
-                                            figsize=CumulativeTrackBuilder.IMAGE_SIZE, 
+                                            #figsize=CumulativeTrackBuilder.IMAGE_SIZE,
                                             linewidth=CumulativeTrackBuilder.LINE_WIDTH)
 
     def _dumpToFiles(self, fileObject=None):
@@ -173,7 +180,12 @@ class CumulativeTrackBuilder:
         
         # Dump image
         if fileObject is None:      # Local file
-            plt.savefig(imageFullFileName, format='png', dpi=CumulativeTrackBuilder.IMAGE_DPI, transparent=True, bbox_inches='tight',pad_inches=0)
+            plt.savefig(imageFullFileName, format='png', 
+                        dpi=CumulativeTrackBuilder.IMAGE_DPI, 
+                        transparent=True, 
+                        bbox_inches='tight',
+                        interpolation='antialiasing', 
+                        pad_inches=0)
         else:                       # File object
             plt.savefig(fileObject, format='png', dpi=CumulativeTrackBuilder.IMAGE_DPI, transparent=True, bbox_inches='tight',pad_inches=0)
         plt.close()

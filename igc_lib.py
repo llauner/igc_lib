@@ -795,6 +795,7 @@ class Flight:
         self.valid = True
         self.notes = []
         self.date_timestamp = None
+        self.duration = 0
         if len(fixes) < self._config.min_fixes:
             self.notes.append(
                 "Error: This file has %d fixes, less than "
@@ -1196,6 +1197,7 @@ class Flight:
 
         self.takeoff_fix = takeoff_fix
         self.landing_fix = landing_fix
+        self.duration = int(landing_fix.rawtime - takeoff_fix.rawtime)
 
     def _compute_bearings(self):
         """Adds bearing info to self.fixes."""

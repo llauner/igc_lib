@@ -17,6 +17,7 @@ class RunMetadata(object):
         self.thermalsCount = int(thermals_count)
         self.boundingBoxUpperLeft = []
         self.boundingBoxLowerRight = []
+        self.processedFlightsCount = 0
         
     def __init__(self):
         # Get current time in the right time-zone
@@ -31,6 +32,7 @@ class RunMetadata(object):
         self.endDate =  None
         self.script_end_time = None   
         self.flightsCount = 0
+        self.processedFlightsCount = 0
         self.thermalsCount = 0
         self.boundingBoxUpperLeft = []
         self.boundingBoxLowerRight = []
