@@ -19,14 +19,13 @@ from progress.bar import Bar
 
 from FtpHelper import *
 from RunMetadata import RunMetadata
+from RunStatistics import RunStatistics
 
 class CumulativeTrackBuilder:
-    
-
-
     # --- Files dans folders ---
     FTP_TRACKS_ROOT_DIRECTORY = "tracemap/tracks/"
     TRACKS_IMAGE_FILE_NAME = "latest-tracks.png"
+    TRACKS_STATISTICS_FILE_NAME = "latest-tracks-statistics.json"
     TRACKS_METADATA_FILE_NAME = "latest-tracks-metadata.json"
     TRACKS_LOCAL_DUMP_DIRECTORY = "/Users/llauner/Downloads/"
     
@@ -61,6 +60,9 @@ class CumulativeTrackBuilder:
         self.franceBoundingBox = Polygon(self.FRANCE_BOUNDING_BOX)
         
         self.isRunningInCloud = not (self.useLocalDirectory and self.isOutToLocalFiles)
+        
+        # Statistics
+        self.runStatistics = RunStatistics()
         
         # --- Setup plot ---
         mpl.rcParams['savefig.pad_inches'] = 0
@@ -126,8 +128,8 @@ class CumulativeTrackBuilder:
 
                 if self.isRunningInCloud:           # ProgressBar does not work in gcloud: pring on stdout
                     print(progressBar.getLine())
-                else:
-                    progressBar.next()  # Update Progress
+                
+                progressBar.next()  # Update Progress
 
                 # ----- Process flight -----
                 self.dumpFlightsToImage(flight)
@@ -170,15 +172,23 @@ class CumulativeTrackBuilder:
                 self.axes = geoSeries.plot(ax=self.axes, 
                                             #figsize=CumulativeTrackBuilder.IMAGE_SIZE,
                                             linewidth=CumulativeTrackBuilder.LINE_WIDTH)
-
+                # Add flight to Statistics
+                self.addFlightToStatistics(flight)
+                
+    def addFlightToStatistics(self, flight):
+        flightDate = datetime.fromtimestamp(flight.date_timestamp).date()
+        flightDate = flightDate.strftime('%Y_%m_%d')
+        self.runStatistics.addTimeSeries(flightDate)
+        
     def _dumpToFiles(self, fileObject=None):
         # Dump to HTML (results in a very large file)
         #mplleaflet.show(path='/Users/llauner/Downloads/latest-tracks.html')
         
         imageFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
         metadataFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
+        statisticsFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
         
-        # Dump image
+        # --- Dump image ---
         if fileObject is None:      # Local file
             plt.savefig(imageFullFileName, format='png', 
                         dpi=CumulativeTrackBuilder.IMAGE_DPI, 
@@ -190,7 +200,7 @@ class CumulativeTrackBuilder:
             plt.savefig(fileObject, format='png', dpi=CumulativeTrackBuilder.IMAGE_DPI, transparent=True, bbox_inches='tight',pad_inches=0)
         plt.close()
         
-        # Build metadata
+        # --- Build metadata ----
         tz = pytz.timezone('Europe/Paris')
         self.metaData.setEndTime(datetime.now(tz))
         
@@ -198,11 +208,21 @@ class CumulativeTrackBuilder:
         if fileObject is None:      # Local file
             with open(metadataFullFileName, 'w') as jsonOut:
                 jsonOut.write(self.JsonMetaData())
-
+                
+        # --- Dump Statistics ---
+        if fileObject is None:      # Local file
+            statistics = self.runStatistics.toJson()
+            with open(statisticsFullFileName, 'w') as jsonOut:
+                jsonOut.write(statistics)
+        
+        
+        
 
     def _dumpToFtp(self):
         imageFullFileName =  CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
         metadataFullFileName = CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
+        statisticsFullFileName = CumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
+        
         
         # Dump to FTP
         self.ftpClientOut = self.ftpClientOut.getFtpClient()
@@ -225,6 +245,13 @@ class CumulativeTrackBuilder:
                                         metadataFullFileName, 
                                         self.JsonMetaData())
         
+        # --- Dump Statistics ---
+        print(f"Dump to FTP: {self.ftpClientOut.host} ->{statisticsFullFileName}")
+        FtpHelper.dumpStringToFTP(self.ftpClientOut, 
+                                        None, 
+                                        statisticsFullFileName, 
+                                        self.runStatistics.toJson())
+    
         # Print result so that it's logged
         print (self.JsonMetaData())
 
