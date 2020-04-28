@@ -83,12 +83,42 @@ def get_geojson_track_collection_full(list_flights, isIncludeProperties=True):
                 tracks.append(gjson.Feature(geometry=json_line, properties={"alt": alt, 
                                                                             "ts": ts}))
             else:
-                 tracks.append(gjson.Feature(geometry=json_line))
+                tracks.append(gjson.Feature(geometry=json_line))
 
     feature_collection = gjson.FeatureCollection(tracks)
     return feature_collection
 
-   
+# -------- Features ------------------------------------------------------
+def get_geojson_feature_track_collection_simple(flight):
+    tracks = []
+    coordinates = []
+    for i in range(0, len(flight.fixes)-2):
+        lat1 = flight.fixes[i].lat
+        lon1 = flight.fixes[i].lon
+        lat2 = flight.fixes[i+1].lat
+        lon2 = flight.fixes[i+1].lon
+        coordinates.append([lon1, lat1])
+        coordinates.append([lon2, lat2])
+
+    json_line=gjson.LineString(coordinates)
+    feature = gjson.Feature(geometry=json_line)
+    return feature
+
+def getFeaturesAsFeatureCollection(listFeatures):
+    featureCollection = gjson.FeatureCollection(listFeatures)
+    return featureCollection
+
+def getJsonFromFeatures(listFeatures):
+    featureCollection = getFeaturesAsFeatureCollection(listFeatures)
+    json = gjson.dumps(featureCollection)
+    return json
+# --------------------- Dump to ... -----------------------------------
+
+# --- Features ---
+def dumpFeaturesToFile(output_filename, listFeatures):
+    feature_collection = getFeaturesAsFeatureCollection(listFeatures)
+    dump_feature_collection_to_file(output_filename, feature_collection)
+
 def dump_to_geojson(output_filename, list_thermals):
     # Dump thermals
     feature_collection = get_geojson_feature_collection(list_thermals)
@@ -96,7 +126,15 @@ def dump_to_geojson(output_filename, list_thermals):
     #Write output: thermals
     with open('{}.geojson'.format(output_filename), 'w') as f:
         gjson.dump(feature_collection, f)
- 
+
+def dump_feature_collection_to_file(output_filename, featureCollection):
+    #Write output: Tracks
+    with open('{}.geojson'.format(output_filename), 'w') as f:
+        gjson.dump(featureCollection, f)
+    
+    script_time = datetime.now()
+    print("dump_tracks_to_file: end={}".format(script_time))
+
 def dump_tracks_to_file(output_filename, list_flights):
     script_time = datetime.now()
     print("dump_tracks_to_file: start={}".format(script_time))

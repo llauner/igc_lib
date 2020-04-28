@@ -5,6 +5,7 @@ import zipfile
 import igc_lib
 import igc2geojson
 import numpy as np
+import zipfile
 
 import io
 
@@ -27,6 +28,9 @@ class CumulativeTrackBuilder:
     TRACKS_IMAGE_FILE_NAME = "latest-tracks.png"
     TRACKS_STATISTICS_FILE_NAME = "latest-tracks-statistics.json"
     TRACKS_METADATA_FILE_NAME = "latest-tracks-metadata.json"
+    
+    TRACKS_GEOJSON_FILE_NAME = "latest-tracks"
+    TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME = "latest-tracks.geojson.zip"
     TRACKS_LOCAL_DUMP_DIRECTORY = "/Users/llauner/Downloads/"
     
     # --- Geo information ---
@@ -73,6 +77,8 @@ class CumulativeTrackBuilder:
         self.axes.get_xaxis().set_visible(False)
         self.axes.get_yaxis().set_visible(False)
         plt.autoscale(tight=True)
+        
+        self.geojsonFeatures = []
 
     def run(self):
         if not self.useLocalDirectory:
@@ -132,9 +138,11 @@ class CumulativeTrackBuilder:
                 progressBar.next()  # Update Progress
 
                 # ----- Process flight -----
-                self.dumpFlightsToImage(flight)
+                self.createFlightImage(flight)
+                self.createFlightGeoJson(flight)
             
             progressBar.finish()    # End Progress
+            
                 
             # --- Save bounding box ---
             self.metaData.boundingBoxUpperLeft = [self.axes.dataLim.extents[1], self.axes.dataLim.extents[0]]
@@ -145,7 +153,13 @@ class CumulativeTrackBuilder:
         else:                           # Dump to FTP
             self._dumpToFtp()
         
-    def dumpFlightsToImage(self, flight):
+    def createFlightImage(self, flight):
+        """
+        Creates transparent png image for given flight
+
+        Args:
+            flight ([type]): [description]
+        """        
         lons = np.vectorize(lambda f: f.lon)
         lats = np.vectorize(lambda f: f.lat)
 
@@ -156,6 +170,7 @@ class CumulativeTrackBuilder:
     
         flightLineString = LineString(flightPoints)
         geoSeries = GeoSeries(flightLineString)
+        geoSeries.crs = "EPSG:3857"
         
         # ----- Filter -----
         isFlightOK = True
@@ -169,11 +184,50 @@ class CumulativeTrackBuilder:
         
         if isFlightOK:
                 self.metaData.processedFlightsCount += 1
-                self.axes = geoSeries.plot(ax=self.axes, 
+                self.axes = geoSeries.plot(ax=self.axes,
                                             #figsize=CumulativeTrackBuilder.IMAGE_SIZE,
                                             linewidth=CumulativeTrackBuilder.LINE_WIDTH)
                 # Add flight to Statistics
                 self.addFlightToStatistics(flight)
+    
+    def createFlightGeoJson(self, flight):
+        """
+        Create GeoJson for given flight
+
+        Args:
+            flight ([type]): [description]
+        """        
+        lons = np.vectorize(lambda f: f.lon)
+        lats = np.vectorize(lambda f: f.lat)
+
+        # --- Browse and plot files ---
+        longitudes = lons(flight.fixes)
+        latitudes = lats(flight.fixes)
+        # Remove points
+        longitudes = longitudes[::10]
+        latitudes = latitudes[::10]
+        
+        flightPoints = list(zip(longitudes.tolist(), latitudes.tolist()))
+        flightLineString = LineString(flightPoints)
+        
+        # --- Reduce number of fixes ---
+        fixes = np.array(flight.fixes)
+        fixes = fixes[::10]
+        flight.fixes = fixes.tolist()
+        
+        # ----- Filter -----
+        isFlightOK = True
+        # Check that the flight time is > 45 min
+        isDurationOk = flight.duration/60 >=45
+        isFlightOK = isFlightOK and isDurationOk
+        # Check that the flight is inside the France polygon
+        if isFlightOK:
+            isInsindeFrance = self.franceBoundingBox.contains(flightLineString)
+            isFlightOK = isFlightOK and isInsindeFrance
+        
+        if isFlightOK:
+                feature = igc2geojson.get_geojson_feature_track_collection_simple(flight)
+                self.geojsonFeatures.append(feature)
                 
     def addFlightToStatistics(self, flight):
         flightDate = datetime.fromtimestamp(flight.date_timestamp).date()
@@ -181,15 +235,28 @@ class CumulativeTrackBuilder:
         self.runStatistics.addTimeSeries(flightDate)
         
     def _dumpToFiles(self, fileObject=None):
-        # Dump to HTML (results in a very large file)
+        """
+        Dump items to files
+
+        Args:
+            fileObject ([type], optional): [description]. Defaults to None.
+        """        
+        # --- Dump geojson file ---
+        if fileObject is None:      # Local file
+            geojsonFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME
+            igc2geojson.dumpFeaturesToFile(geojsonFullFileName, self.geojsonFeatures)
+        
+        # --- Dump to HTML (results in a very large file) ---
         #mplleaflet.show(path='/Users/llauner/Downloads/latest-tracks.html')
         
+        # --- Dump image, metadata and statistics ---
         imageFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
         metadataFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
         statisticsFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
         
         # --- Dump image ---
         if fileObject is None:      # Local file
+            print(f"Dump image to file: {imageFullFileName}")
             plt.savefig(imageFullFileName, format='png', 
                         dpi=CumulativeTrackBuilder.IMAGE_DPI, 
                         transparent=True, 
@@ -197,7 +264,12 @@ class CumulativeTrackBuilder:
                         interpolation='antialiasing', 
                         pad_inches=0)
         else:                       # File object
-            plt.savefig(fileObject, format='png', dpi=CumulativeTrackBuilder.IMAGE_DPI, transparent=True, bbox_inches='tight',pad_inches=0)
+            plt.savefig(fileObject, 
+                        format='png', 
+                        dpi=CumulativeTrackBuilder.IMAGE_DPI, 
+                        transparent=True, 
+                        bbox_inches='tight',
+                        pad_inches=0)
         plt.close()
         
         # --- Build metadata ----
@@ -206,26 +278,56 @@ class CumulativeTrackBuilder:
         
         # Dump MetaData
         if fileObject is None:      # Local file
+            print(f"Dump metadata to file: {metadataFullFileName}")
             with open(metadataFullFileName, 'w') as jsonOut:
                 jsonOut.write(self.JsonMetaData())
                 
         # --- Dump Statistics ---
         if fileObject is None:      # Local file
+            print(f"Dump statistics to file: {statisticsFullFileName}")
             statistics = self.runStatistics.toJson()
             with open(statisticsFullFileName, 'w') as jsonOut:
                 jsonOut.write(statistics)
         
-        
-        
-
     def _dumpToFtp(self):
+        """
+        Dump items to files on FTP
+        """        
         imageFullFileName =  CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
         metadataFullFileName = CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
         statisticsFullFileName = CumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
+        geojsonFileName = CumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME + ".geojson"
+        zipArchiveFileName = CumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME
         
-        
+
         # Dump to FTP
         self.ftpClientOut = self.ftpClientOut.getFtpClient()
+        
+        # --- Dump geojson ---
+        # Write gojson to FTP
+        print(f"Dump to FTP: {self.ftpClientOut.host} ->{geojsonFileName}")
+        geojson = igc2geojson.getJsonFromFeatures(self.geojsonFeatures)
+        FtpHelper.dumpStringToFTP(self.ftpClientOut,
+                                    CumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
+                                    geojsonFileName,
+                                    geojson)
+        
+        # Write ZIP to FTP
+        # Create zip file
+        fileBufferZip = io.BytesIO()
+        zf = zipfile.ZipFile(fileBufferZip, mode="w", compression=zipfile.ZIP_DEFLATED)
+        zf.writestr(geojsonFileName, geojson)
+        zf.close()
+        fileBufferZip.seek(0)
+        
+        # Write to FTP
+        print(f"Dump ZIP to FTP: {self.ftpClientOut.host} ->{zipArchiveFileName}")
+        FtpHelper.dumpFileToFtp(self.ftpClientOut, 
+                                        None,
+                                        zipArchiveFileName, 
+                                        fileBufferZip)
+        fileBufferZip.close()
+        
         # image
         fileBuffer = io.BytesIO()
         self._dumpToFiles(fileBuffer)
@@ -233,7 +335,7 @@ class CumulativeTrackBuilder:
         
         print(f"Dump to FTP: {self.ftpClientOut.host} ->{imageFullFileName}")
         FtpHelper.dumpFileToFtp(self.ftpClientOut, 
-                                        CumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY, 
+                                        None,
                                         imageFullFileName, 
                                         fileBuffer)
         fileBuffer.close()
