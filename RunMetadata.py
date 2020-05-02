@@ -39,8 +39,9 @@ class RunMetadata(object):
     
 
     def setEndTime(self, script_end_time):
-        self.endDate =  str(script_end_time)
-        self.duration = str(script_end_time - self.script_start_time)
+        if self.endDate is None:
+            self.endDate =  str(script_end_time)
+            self.duration = str(script_end_time - self.script_start_time)
         
     def toJSON(self):
         self.script_start_time = str(self.script_start_time)
