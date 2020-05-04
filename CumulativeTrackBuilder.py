@@ -25,7 +25,7 @@ from DumpFileName import DumpFileName
 
 class CumulativeTrackBuilder:
     # --- Files dans folders ---
-    FTP_TRACKS_ROOT_DIRECTORY = "tracemap/test/"
+    FTP_TRACKS_ROOT_DIRECTORY = "tracemap/tracks/"
     LATEST_PREFIX = "latest"
     
     TRACKS_IMAGE_SUFFIX = "-tracks.png"
