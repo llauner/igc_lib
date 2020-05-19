@@ -5,7 +5,10 @@ from flask.json import JSONEncoder
 
 
 class RunMetadata(object):
-    def __init__(self, target_date, script_start_time, script_end_time, flights_count, thermals_count):    
+    def init(self, target_date, script_start_time, script_end_time, flights_count, thermals_count):    
+        # Get current time in the right time-zone
+        tz = pytz.timezone('Europe/Paris')
+        
         self.targetDate = str(target_date)
         script_start_time = datetime.now(tz)
         self.script_start_time = script_start_time

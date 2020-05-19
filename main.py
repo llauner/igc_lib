@@ -219,7 +219,8 @@ def main(request):
         else:
             print("No .zip file found")
             script_end_time = datetime.now(tz)
-            metadata = RunMetadata(target_date, script_start_time, script_end_time, flights_count, len(global_thermals))
+            metadata = RunMetadata()
+            metadata.init(target_date, script_start_time, script_end_time, flights_count, len(global_thermals))
             jsonMetadata = metadata.toJSON()
     # ---------------------------------------------------- Cumulative Track ----------------------------------------------
     else:
@@ -231,8 +232,7 @@ def main(request):
         # Run !
         cumulativeTrackBuilder.run()
         jsonMetadata = cumulativeTrackBuilder.JsonMetaData()
-
-
+        
     return_message = jsonMetadata
 
     # Disconnect FTP

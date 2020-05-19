@@ -46,14 +46,15 @@ class FtpHelper():
         else:
             search_start_date = lookup_date
             search_end_date = target_date
+            
+        lines = []
+        ftp_client.dir(".", lines.append)
 
-        files = ftp_client.mlsd()   # List files from FTP
-
-        for file in files:
-            name = file[0]
+        for line in lines:
+            tokens = line.split(maxsplit = 9)
+            name = tokens[3]
             suffix = pathlib.Path(name).suffix.replace('.','')
-            timestamp = file[1]['modify']
-            modified_date = parser.parse(timestamp).date()
+            modified_date = parser.parse(tokens[0]).date()
         
             if suffix == "zip" and (search_start_date <= modified_date and modified_date <= search_end_date):
                 file_names.append(name)
