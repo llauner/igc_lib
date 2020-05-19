@@ -5,3 +5,4 @@
 # Do not ignore anything in testfiles
 !testfiles/*
 .igc_lib-env/bin/fio
+venv_igclib/

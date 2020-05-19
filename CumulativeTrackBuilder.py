@@ -39,6 +39,7 @@ class CumulativeTrackBuilder:
     
     TRACKS_GEOJSON_SUFFIX = "-tracks"
     TRACKS_GEOJSON_FILE_NAME = LATEST_PREFIX + TRACKS_GEOJSON_SUFFIX
+    TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX = TRACKS_GEOJSON_FILE_NAME + ".geojson"
     
     TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX = "-tracks.geojson.zip"
     TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME = LATEST_PREFIX + TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX
@@ -353,7 +354,7 @@ class CumulativeTrackBuilder:
         # Create zip file
         fileBufferZip = io.BytesIO()
         zf = zipfile.ZipFile(fileBufferZip, mode="w", compression=zipfile.ZIP_DEFLATED)
-        zf.writestr(CumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME, geojson)
+        zf.writestr(CumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX, geojson)
         zf.close()
         fileBufferZip.seek(0)
         
