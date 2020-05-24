@@ -52,11 +52,11 @@ def main(request):
 
 
     # HACK: This is used to debug localy
-    #Request = type('Request', (object,), {})
-    #request = Request()
+    Request = type('Request', (object,), {})
+    request = Request()
     #request.args = {"dryRun": False, "isTrack": True, "targetYear":"2020"}
     #request.args = {"dryRun": True, "targetDate":"2020_02_17", "relDaysLookup":1}
-    #request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
+    request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
     #request.args = {"dryRun": True, "catchupOnPreviousDay":True}               # As executed between midnight and 17:00 = Will generate map for the previous day with flights from previous + current day
     #request.args = {}                                                           # As executed after 17:00 every day = Will generate map for the day with flights of the day
 
@@ -200,7 +200,8 @@ def main(request):
 
             ## Metadata
             script_end_time = datetime.now(tz)
-            metadata = RunMetadata(target_date, script_start_time, script_end_time, flights_count, len(global_thermals))
+            metadata = RunMetadata()
+            metadata.init(target_date, script_start_time, script_end_time, flights_count, len(global_thermals))
             jsonMetadata = metadata.toJSON()
             # Output run metadata information: latest-metadata.json
             if is_latest_processing:
