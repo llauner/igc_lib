@@ -6,3 +6,5 @@
 !testfiles/*
 .igc_lib-env/bin/fio
 venv_igclib/
+.vscode/settings.json
+.vscode/launch.json
