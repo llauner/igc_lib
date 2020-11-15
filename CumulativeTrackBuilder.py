@@ -46,11 +46,10 @@ class CumulativeTrackBuilder:
     TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME = LATEST_PREFIX + \
         TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX
 
-    TRACKS_LOCAL_DUMP_DIRECTORY = "/Users/llauner/Downloads/"
+    TRACKS_LOCAL_DUMP_DIRECTORY = "D:\\llauner\src\\cumulativeTracksWeb\\tracks\\"
 
     # --- Geo information ---41.196834, 10.328174
-    FRANCE_BOUNDING_BOX = [(-6.566734, 51.722775), (10.645924,
-                                                    51.726922), (10.328174, 41.196834), (-7.213631, 40.847787)]
+    FRANCE_BOUNDING_BOX = [(-6.566734, 51.722775), (10.645924,51.726922), (10.328174, 41.196834), (-7.213631, 40.847787)]
 
     # --- Iamge settings ---
     IMAGE_DPI = 1800
@@ -58,7 +57,7 @@ class CumulativeTrackBuilder:
     LINE_WIDTH = 0.05
 
     # --- Dev and Debug ---
-    NB_FILES_TO_KEEP = None
+    NB_FILES_TO_KEEP = 10
 
     def __init__(self, ftpClientIgc, ftpClientOut, targetYear=None, useLocalDirectory=False, isOutToLocalFiles=False):
         self.metaData = RunMetadata()
@@ -111,17 +110,16 @@ class CumulativeTrackBuilder:
 
     def _run(self, allFiles):
         self.fileList = allFiles
-        self.metaData.flightsCount = len(allFiles)
 
         # DEv or Debug: Take only a few flights during dev...
         if CumulativeTrackBuilder.NB_FILES_TO_KEEP:
             del allFiles[0: len(allFiles) -
                          CumulativeTrackBuilder.NB_FILES_TO_KEEP]
+        self.metaData.flightsCount = len(allFiles)
 
         # --- Process files to get flights
         if allFiles:
-            progressBar = CumulativeTrackBuilder.SlowBar(
-                'Processing', max=self.metaData.flightsCount)
+            progressBar = CumulativeTrackBuilder.SlowBar('Processing', max=self.metaData.flightsCount)
 
             for i, filename in enumerate(allFiles):
 
@@ -141,22 +139,18 @@ class CumulativeTrackBuilder:
                     flight = igc_lib.Flight.create_from_file(filename)
 
                 if flight.date_timestamp:
-                    flight_date = datetime.fromtimestamp(
-                        flight.date_timestamp).date()
+                    flight_date = datetime.fromtimestamp(flight.date_timestamp).date()
                 # --- Build progress message and update
                 if flight.valid and flight_date:
                     if computedFileName:
-                        progressBar.progressMessage = "{} -> {}".format(
-                            filename, computedFileName)
+                        progressBar.progressMessage = "{} -> {}".format(filename, computedFileName)
                     else:
                         progressBar.progressMessage = "{}".format(filename)
                 else:
                     if computedFileName:
-                        progressBar.progressMessage = "{} -> {} \t Discarded ! valid={}".format(
-                            filename, computedFileName, flight.valid)
+                        progressBar.progressMessage = "{} -> {} \t Discarded ! valid={}".format(filename, computedFileName, flight.valid)
                     else:
-                        progressBar.progressMessage = "{} \t Discarded ! valid={}".format(
-                            filename, flight.valid)
+                        progressBar.progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
 
                 if self.isRunningInCloud:           # ProgressBar does not work in gcloud: pring on stdout
                     print(progressBar.getLine())
@@ -164,16 +158,16 @@ class CumulativeTrackBuilder:
                 progressBar.next()  # Update Progress
 
                 # ----- Process flight -----
-                self.createFlightImage(flight)
+                #self.createFlightImage(flight)
                 self.createFlightGeoJson(flight)
+                
+                del flight
 
             progressBar.finish()    # End Progress
 
             # --- Save bounding box ---
-            self.metaData.boundingBoxUpperLeft = [
-                self.axes.dataLim.extents[1], self.axes.dataLim.extents[0]]
-            self.metaData.boundingBoxLowerRight = [
-                self.axes.dataLim.extents[3], self.axes.dataLim.extents[2]]
+            self.metaData.boundingBoxUpperLeft = [self.axes.dataLim.extents[1], self.axes.dataLim.extents[0]]
+            self.metaData.boundingBoxLowerRight = [self.axes.dataLim.extents[3], self.axes.dataLim.extents[2]]
 
         if self.isOutToLocalFiles:      # Dump to local files
             self._dumpToFiles()
@@ -217,6 +211,16 @@ class CumulativeTrackBuilder:
             # Add flight to Statistics
             self.addFlightToStatistics(flight)
 
+        del lons
+        del lats
+        del longitudes
+        del latitudes
+        del flightPoints
+        del flightLineString
+        del geoSeries
+
+
+
     def createFlightGeoJson(self, flight):
         """
         Create GeoJson for given flight
@@ -237,6 +241,9 @@ class CumulativeTrackBuilder:
         flightPoints = list(zip(longitudes.tolist(), latitudes.tolist()))
         flightLineString = LineString(flightPoints)
 
+        geoSeries = GeoSeries(flightLineString)
+        geoSeries.crs = "EPSG:3857"
+
         # --- Reduce number of fixes ---
         fixes = np.array(flight.fixes)
         fixes = fixes[::10]
@@ -253,9 +260,27 @@ class CumulativeTrackBuilder:
             isFlightOK = isFlightOK and isInsindeFrance
 
         if isFlightOK:
-            feature = igc2geojson.get_geojson_feature_track_collection_simple(
-                flight)
+            feature = igc2geojson.get_geojson_feature_track_collection_simple(flight)
             self.geojsonFeatures.append(feature)
+
+            self.metaData.processedFlightsCount += 1
+            self.axes = geoSeries.plot(ax=self.axes,
+                                       # figsize=CumulativeTrackBuilder.IMAGE_SIZE,
+                                       linewidth=CumulativeTrackBuilder.LINE_WIDTH)
+            # Add flight to Statistics
+            self.addFlightToStatistics(flight)
+
+
+            del feature
+
+        del lons
+        del lats
+        del longitudes
+        del latitudes
+        del flightPoints
+        del flightLineString
+        del geoSeries
+
 
     def addFlightToStatistics(self, flight):
         flightDate = datetime.fromtimestamp(flight.date_timestamp).date()
@@ -280,12 +305,9 @@ class CumulativeTrackBuilder:
         # mplleaflet.show(path='/Users/llauner/Downloads/latest-tracks.html')
 
         # --- Dump image, metadata and statistics ---
-        imageFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + \
-            CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
-        metadataFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + \
-            CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
-        statisticsFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + \
-            CumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
+        imageFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
+        metadataFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
+        statisticsFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
 
         # --- Dump image ---
         if fileObject is None:      # Local file
@@ -294,7 +316,7 @@ class CumulativeTrackBuilder:
                         dpi=CumulativeTrackBuilder.IMAGE_DPI,
                         transparent=True,
                         bbox_inches='tight',
-                        interpolation='antialiasing',
+                        #interpolation='antialiasing',
                         pad_inches=0)
         else:                       # File object
             plt.savefig(fileObject,

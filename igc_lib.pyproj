@@ -2,29 +2,25 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>c7d8a499-cb80-42f1-807a-a8fa5c50e7e2</ProjectGuid>
-    <ProjectHome>
-    </ProjectHome>
+    <ProjectGuid>{3ce3535a-7699-4d76-a7fb-f5e6bafe087b}</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
     <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>igc_lib</Name>
-    <RootNamespace>github_igc_lib</RootNamespace>
+    <Name>i</Name>
+    <RootNamespace>i</RootNamespace>
+    <InterpreterId>MSBuild|venv_igclib|$(MSBuildProjectFullPath)</InterpreterId>
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>D:\_Downloads\igc\2019_igc D:\_Downloads\igc\heatmap relTargetDate=-15 dryRun</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <Environment>GOOGLE_APPLICATION_CREDENTIALS=C:\Users\l.launer\src\MapBox\Service_Account_Key-IgcHeatMap-4bca6050958e.json
-FTP_SERVER_NAME=ftp3.phpnet.org
-FTP_LOGIN=netcoupe_DG800ludo
-FTP_PASSWORD=SIx4m8nu_
-FTP_SERVER_NAME_IGC=95.215.226.140
+    <Environment>FTP_SERVER_NAME_IGC=91.232.125.207
 FTP_LOGIN_IGC=netcoupe_ludoigc
-FTP_PASSWORD_IGC=IGC2020Sw7qo</Environment>
-    <InterpreterArguments>
-    </InterpreterArguments>
+FTP_PASSWORD_IGC=IGC2020Sw7qo
+FTP_SERVER_NAME=ftp.p4950.webmo.fr
+FTP_LOGIN=p4950_DG800ludo
+FTP_PASSWORD=SIx4m8nu_</Environment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -35,38 +31,48 @@ FTP_PASSWORD_IGC=IGC2020Sw7qo</Environment>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CumulativeTrackBuilder.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="FtpHelper.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="igc_lib.py" />
+    <Compile Include="CumulativeTrackBuilder.py" />
+    <Compile Include="DumpFileName.py" />
+    <Compile Include="FtpHelper.py" />
     <Compile Include="igc2geojson.py" />
+    <Compile Include="igc_lib.py" />
     <Compile Include="lib\dumpers.py" />
     <Compile Include="lib\geo.py" />
     <Compile Include="lib\viterbi.py" />
     <Compile Include="lib\__init__.py" />
-    <Compile Include="main.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="main_local.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ProcessingType.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="RunMetadata.py">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="main.py" />
+    <Compile Include="main_local.py" />
+    <Compile Include="ProcessingType.py" />
+    <Compile Include="RunMetadata.py" />
+    <Compile Include="RunStatistics.py" />
+    <Compile Include="staticMap.py" />
+    <Compile Include="trash.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="lib\" />
+    <Folder Include="lib\__pycache__\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include=".gitignore" />
+    <Content Include="lib\__pycache__\dumpers.cpython-37.pyc" />
+    <Content Include="lib\__pycache__\geo.cpython-37.pyc" />
+    <Content Include="lib\__pycache__\viterbi.cpython-37.pyc" />
+    <Content Include="lib\__pycache__\__init__.cpython-37.pyc" />
+    <Content Include="LICENSE" />
     <Content Include="README.md" />
     <Content Include="requirements.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include="venv_igclib\">
+      <Id>venv_igclib</Id>
+      <Version>3.7</Version>
+      <Description>venv_igclib (Python 3.7 (64-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

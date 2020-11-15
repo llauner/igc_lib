@@ -94,7 +94,6 @@ def get_geojson_track_collection_full(list_flights, isIncludeProperties=True):
 
 
 def get_geojson_feature_track_collection_simple(flight):
-    tracks = []
     coordinates = []
     for i in range(0, len(flight.fixes)-2):
         lat1 = flight.fixes[i].lat
@@ -106,6 +105,9 @@ def get_geojson_feature_track_collection_simple(flight):
 
     json_line = gjson.LineString(coordinates)
     feature = gjson.Feature(geometry=json_line)
+
+    del coordinates
+
     return feature
 
 

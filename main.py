@@ -54,14 +54,17 @@ def main(request):
     cumulativeTrackBuilder = None
 
     # HACK: This is used to debug localy
-    #Request = type('Request', (object,), {})
-    #request = Request()
+    Request = type('Request', (object,), {})
+    request = Request()
     #request.args = {"dryRun": False, "isTrack": True, "targetYear":"2020"}
     # request.args = {"dryRun": False,
     #                "targetDate": "2020_07_11", "relDaysLookup": 1}
     # request.args = {"dryRun": True, "relTargetDate":-15}                       # As executed regularly to consolidate map for day-d with flights from day-d until now
-    # request.args = {"dryRun": True, "catchupOnPreviousDay":True}               # As executed between midnight and 17:00 = Will generate map for the previous day with flights from previous + current day
-    # request.args = {}                                                           # As executed after 17:00 every day = Will generate map for the day with flights of the day
+    # As executed between midnight and 17:00 = Will generate map for the previous day with flights from previous + current day
+    #request.args = {"dryRun": False, "catchupOnPreviousDay": True}
+    # As executed after 17:00 every day = Will generate map for the day with flights of the day
+    #request.args = {}
+    request.args = {"isTrack": True}
 
     # Parse request parameters
     # ----- Heatmap -----
