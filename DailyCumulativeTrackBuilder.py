@@ -18,13 +18,14 @@ import pandas as pd
 import mplleaflet
 import progressbar
 
+from StorageService import *
 from FtpHelper import *
 from RunMetadata import RunMetadata
 from RunStatistics import RunStatistics
 from DumpFileName import DumpFileName
 
 
-class CumulativeTrackBuilder:
+class DailyCumulativeTrackBuilder:
     # --- Files dans folders ---
     FTP_TRACKS_ROOT_DIRECTORY = "tracemap/tracks/"
     LATEST_PREFIX = "latest"
@@ -43,28 +44,18 @@ class CumulativeTrackBuilder:
     TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX = TRACKS_GEOJSON_FILE_NAME + ".geojson"
 
     TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX = "-tracks.geojson.zip"
-    TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME = LATEST_PREFIX + \
-        TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX
+    TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME = LATEST_PREFIX + TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX
 
     TRACKS_LOCAL_DUMP_DIRECTORY = "D:\\llauner\src\\cumulativeTracksWeb\\tracks\\"
 
     # --- Geo information ---41.196834, 10.328174
     FRANCE_BOUNDING_BOX = [(-6.566734, 51.722775), (10.645924,51.726922), (10.328174, 41.196834), (-7.213631, 40.847787)]
 
-    # --- Iamge settings ---
-    IMAGE_DPI = 1800
-    # IMAGE_SIZE=(20,20)
-    LINE_WIDTH = 0.05
-
-    # --- Dev and Debug ---
-    NB_FILES_TO_KEEP = None
-
-    def __init__(self, ftpClientIgc, ftpClientOut, targetYear=None, useLocalDirectory=False, isOutToLocalFiles=False):
+    def __init__(self, ftpClientOut, target_date, isOutToLocalFiles=False):
         self.metaData = RunMetadata()
-        self.ftpClientIgc = ftpClientIgc
         self.ftpClientOut = ftpClientOut
-        self.targetYear = datetime.now().year if targetYear is None else targetYear
-        self.useLocalDirectory = useLocalDirectory
+        self.storageService = StorageService()
+        self.target_date = target_date
         self.isOutToLocalFiles = isOutToLocalFiles
 
         self.fileList = []
@@ -72,85 +63,37 @@ class CumulativeTrackBuilder:
 
         self.progressMessage = None
 
-        # Compute targetDate
-        # Start on January 1st
-        self.targetDate = date(self.targetYear, 1, 1)
-        self.relDaysLookup = 365                   # All year
-
         self.franceBoundingBox = Polygon(self.FRANCE_BOUNDING_BOX)
 
-        self.isRunningInCloud = not (
-            self.useLocalDirectory and self.isOutToLocalFiles)
+        self.isRunningInCloud = not self.isOutToLocalFiles
 
         # Statistics
         self.runStatistics = RunStatistics()
-
-        # --- Setup plot ---
-        mpl.rcParams['savefig.pad_inches'] = 0
-        mpl.use('agg')
-        figsize = None
-        fig = plt.figure(figsize=figsize)
-        self.axes = plt.axes([0, 0, 1, 1], frameon=False)
-        self.axes.get_xaxis().set_visible(False)
-        self.axes.get_yaxis().set_visible(False)
-        plt.autoscale(tight=True)
-
         self.geojsonFeatures = []
 
     def run(self):
-        if not self.useLocalDirectory:
-            allFiles = FtpHelper.get_file_names_from_ftp(
-                self.ftpClientIgc, self.targetDate, self.relDaysLookup)
-        else:
-            allFiles = FtpHelper.getFIlenamesFromLocalFolder()
-        self.fileList = allFiles
-        self._run(self.fileList)
-
-        return self.metaData
-
-    def _run(self, allFiles):
-        self.fileList = allFiles
-
-        # DEv or Debug: Take only a few flights during dev...
-        if CumulativeTrackBuilder.NB_FILES_TO_KEEP:
-            del allFiles[0: len(allFiles) -
-                         CumulativeTrackBuilder.NB_FILES_TO_KEEP]
-        self.metaData.flightsCount = len(allFiles)
+        self.fileList  = self.storageService.GetFileList(self.target_date)
+        self.fileList = self.fileList[::30]
+        self.metaData.flightsCount = len(self.fileList)
 
         # --- Process files to get flights
-        if allFiles:
+        if self.fileList:
             bar = progressbar.ProgressBar(max_value=self.metaData.flightsCount)
 
-            for i, filename in enumerate(allFiles):
+            for i, filename in enumerate(self.fileList):
+                file_as_bytesio = self.storageService.GetFileAsString(filename)
 
-                computedFileName = None
-                flight = None
-                # ----- File from FTP -----
-                if not self.useLocalDirectory:
-                    zip = FtpHelper.get_file_from_ftp(
-                        self.ftpClientIgc, filename)
-
-                    with zipfile.ZipFile(zip) as zip_file:
-                        computedFileName = zip_file.filelist[0].filename
-                        flight = igc_lib.Flight.create_from_zipfile(zip_file)
-
-                # ----- File from local directory -----
-                else:
-                    flight = igc_lib.Flight.create_from_file(filename)
+                flight = igc_lib.Flight.create_from_bytesio(file_as_bytesio)
+                file_as_bytesio.close
+                del file_as_bytesio
 
                 if flight.date_timestamp:
                     flight_date = datetime.fromtimestamp(flight.date_timestamp).date()
                 # --- Build progress message and update
                 if flight.valid and flight_date:
-                    if computedFileName:
-                        bar.progressMessage = "{} -> {}".format(filename, computedFileName)
-                    else:
-                        bar.progressMessage = "{}".format(filename)
+                    bar.progressMessage = "{}".format(filename)
                 else:
-                    if computedFileName:
-                        bar.progressMessage = "{} -> {} \t Discarded ! valid={}".format(filename, computedFileName, flight.valid)
-                    else:
-                        bar.progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
+                    bar.progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
 
                 if self.isRunningInCloud:           # ProgressBar does not work in gcloud: pring on stdout
                     print(bar.getLine())
@@ -158,62 +101,19 @@ class CumulativeTrackBuilder:
                 bar.update(i)  # Update Progress
 
                 # ----- Process flight -----
-                #self.createFlightImage(flight)
                 self.createFlightGeoJson(flight)
                 
                 del flight
 
             bar.finish()    # End Progress
 
-            # --- Save bounding box ---
-            #self.metaData.boundingBoxUpperLeft = [self.axes.dataLim.extents[1], self.axes.dataLim.extents[0]]
-            #self.metaData.boundingBoxLowerRight = [self.axes.dataLim.extents[3], self.axes.dataLim.extents[2]]
 
         if self.isOutToLocalFiles:      # Dump to local files
             self._dumpToFiles()
         else:                           # Dump to FTP
             self._dumpToFtp()
 
-    def createFlightImage(self, flight):
-        """
-        Creates transparent png image for given flight
-
-        Args:
-            flight ([type]): [description]
-        """
-        lons = np.vectorize(lambda f: f.lon)
-        lats = np.vectorize(lambda f: f.lat)
-
-        # --- Browse and plot files ---
-        longitudes = lons(flight.fixes)
-        latitudes = lats(flight.fixes)
-        flightPoints = list(zip(longitudes.tolist(), latitudes.tolist()))
-
-        flightLineString = LineString(flightPoints)
-
-        # ----- Filter -----
-        isFlightOK = True
-        # Check that the flight time is > 45 min
-        isDurationOk = flight.duration/60 >= 45
-        isFlightOK = isFlightOK and isDurationOk
-        # Check that the flight is inside the France polygon
-        if isFlightOK:
-            isInsindeFrance = self.franceBoundingBox.contains(flightLineString)
-            isFlightOK = isFlightOK and isInsindeFrance
-
-        if isFlightOK:
-            self.metaData.processedFlightsCount += 1
-            # Add flight to Statistics
-            self.addFlightToStatistics(flight)
-
-        del lons
-        del lats
-        del longitudes
-        del latitudes
-        del flightPoints
-        del flightLineString
-
-
+        return self.metaData
 
     def createFlightGeoJson(self, flight):
         """
@@ -264,10 +164,6 @@ class CumulativeTrackBuilder:
 
             self.metaData.processedFlightsCount += 1
             self.addFlightToStatistics(flight)
-            #self.axes = geoSeries.plot(ax=self.axes,
-            #                           # figsize=CumulativeTrackBuilder.IMAGE_SIZE,
-            #                           linewidth=CumulativeTrackBuilder.LINE_WIDTH)
-            # Add flight to Statistics
             del feature
 
         del lons
@@ -293,36 +189,12 @@ class CumulativeTrackBuilder:
         """
         # --- Dump geojson file ---
         if fileObject is None:      # Local file
-            geojsonFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + \
-                CumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME
-            igc2geojson.dumpFeaturesToFile(
-                geojsonFullFileName, self.geojsonFeatures)
+            geojsonFullFileName = DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME
+            igc2geojson.dumpFeaturesToFile(geojsonFullFileName, self.geojsonFeatures)
 
-        # --- Dump to HTML (results in a very large file) ---
-        # mplleaflet.show(path='/Users/llauner/Downloads/latest-tracks.html')
-
-        # --- Dump image, metadata and statistics ---
-        #imageFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
-        metadataFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
-        statisticsFullFileName = CumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + CumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
-
-        ## --- Dump image ---
-        #if fileObject is None:      # Local file
-        #    print(f"Dump image to file: {imageFullFileName}")
-        #    plt.savefig(imageFullFileName, format='png',
-        #                dpi=CumulativeTrackBuilder.IMAGE_DPI,
-        #                transparent=True,
-        #                bbox_inches='tight',
-        #                #interpolation='antialiasing',
-        #                pad_inches=0)
-        #else:                       # File object
-        #    plt.savefig(fileObject,
-        #                format='png',
-        #                dpi=CumulativeTrackBuilder.IMAGE_DPI,
-        #                transparent=True,
-        #                bbox_inches='tight',
-        #                pad_inches=0)
-        #plt.close()
+        # --- Dump image, metadata and statistics ---    
+        metadataFullFileName = DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + DailyCumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
+        statisticsFullFileName = DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + DailyCumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
 
         # --- Build metadata ----
         tz = pytz.timezone('Europe/Paris')
@@ -341,31 +213,17 @@ class CumulativeTrackBuilder:
             with open(statisticsFullFileName, 'w') as jsonOut:
                 jsonOut.write(statistics)
 
-    def _getFilenamesforTargetYear(self, year):
-        filenames = DumpFileName()
-
-        filenames.TracksImageFilename = str(
-            year) + CumulativeTrackBuilder.TRACKS_IMAGE_SUFFIX
-        filenames.TracksMetadataFilename = str(
-            year) + CumulativeTrackBuilder.TRACKS_METADATA_SUFFIX
-        filenames.TracksStatisticsFilename = str(
-            year) + CumulativeTrackBuilder.TRACKS_STATISTICS_SUFFIX
-        filenames.TracksGeojsonFilename = str(
-            year) + CumulativeTrackBuilder.TRACKS_GEOJSON_SUFFIX + ".geojson"
-        filenames.TracksGeojsonZipFilename = str(
-            year) + CumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX
-        return filenames
 
     def _dumpToFtp(self):
         """
         Dump items to files on FTP
         """
         latestFilenames = DumpFileName()
-        latestFilenames.TracksImageFilename = CumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
-        latestFilenames.TracksMetadataFilename = CumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
-        latestFilenames.TracksStatisticsFilename = CumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
-        latestFilenames.TracksGeojsonFilename = CumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME + ".geojson"
-        latestFilenames.TracksGeojsonZipFilename = CumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME
+        latestFilenames.TracksImageFilename = DailyCumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
+        latestFilenames.TracksMetadataFilename = DailyCumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
+        latestFilenames.TracksStatisticsFilename = DailyCumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
+        latestFilenames.TracksGeojsonFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME + ".geojson"
+        latestFilenames.TracksGeojsonZipFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME
 
         # --- Test end of year and copy files if necessary
         isLastRunOfYear = False
@@ -391,7 +249,7 @@ class CumulativeTrackBuilder:
             f"Dump to FTP: {ftpClientOut.host} ->{filenames.TracksGeojsonFilename}")
         geojson = igc2geojson.getJsonFromFeatures(self.geojsonFeatures)
         FtpHelper.dumpStringToFTP(ftpClientOut,
-                                  CumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
+                                  DailyCumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
                                   filenames.TracksGeojsonFilename,
                                   geojson)
 
@@ -401,7 +259,7 @@ class CumulativeTrackBuilder:
         zf = zipfile.ZipFile(fileBufferZip, mode="w",
                              compression=zipfile.ZIP_DEFLATED)
         zf.writestr(
-            CumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX, geojson)
+            DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX, geojson)
         zf.close()
         fileBufferZip.seek(0)
 

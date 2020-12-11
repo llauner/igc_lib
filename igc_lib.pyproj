@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3ce3535a-7699-4d76-a7fb-f5e6bafe087b}</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>main_tracemap.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -20,7 +20,9 @@ FTP_LOGIN_IGC=netcoupe_ludoigc
 FTP_PASSWORD_IGC=IGC2020Sw7qo
 FTP_SERVER_NAME=ftp.p4950.webmo.fr
 FTP_LOGIN=p4950_DG800ludo
-FTP_PASSWORD=SIx4m8nu_</Environment>
+FTP_PASSWORD=SIx4m8nu_
+GOOGLE_APPLICATION_CREDENTIALS=D:\llauner\GoogleCloud_Credentials\Service_Account_Key-igcheatmap-f012be117f9c.json</Environment>
+    <TestFramework>Pytest</TestFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,6 +33,7 @@ FTP_PASSWORD=SIx4m8nu_</Environment>
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DailyCumulativeTrackBuilder.py" />
     <Compile Include="CumulativeTrackBuilder.py" />
     <Compile Include="DumpFileName.py" />
     <Compile Include="FtpHelper.py" />
@@ -40,13 +43,16 @@ FTP_PASSWORD=SIx4m8nu_</Environment>
     <Compile Include="lib\geo.py" />
     <Compile Include="lib\viterbi.py" />
     <Compile Include="lib\__init__.py" />
+    <Compile Include="main_tracemap.py" />
     <Compile Include="main.py" />
     <Compile Include="main_local.py" />
     <Compile Include="ProcessingType.py" />
     <Compile Include="RunMetadata.py" />
     <Compile Include="RunStatistics.py" />
     <Compile Include="staticMap.py" />
-    <Compile Include="trash.py" />
+    <Compile Include="StorageService.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
