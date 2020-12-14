@@ -37,6 +37,9 @@ GOOGLE_APPLICATION_CREDENTIALS=D:\llauner\GoogleCloud_Credentials\Service_Accoun
     <Compile Include="CumulativeTrackBuilder.py" />
     <Compile Include="DumpFileName.py" />
     <Compile Include="FtpHelper.py" />
+    <Compile Include="HashHelper.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="igc2geojson.py" />
     <Compile Include="igc_lib.py" />
     <Compile Include="lib\dumpers.py" />
@@ -49,7 +52,11 @@ GOOGLE_APPLICATION_CREDENTIALS=D:\llauner\GoogleCloud_Credentials\Service_Accoun
     <Compile Include="ProcessingType.py" />
     <Compile Include="RunMetadata.py" />
     <Compile Include="RunStatistics.py" />
+    <Compile Include="ServerCredentials.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="staticMap.py" />
+    <Compile Include="FirestoreService.py" />
     <Compile Include="StorageService.py">
       <SubType>Code</SubType>
     </Compile>

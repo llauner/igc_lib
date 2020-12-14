@@ -11,14 +11,16 @@ import sys
 
 from RunMetadata import RunMetadata
 from DailyCumulativeTrackBuilder import *
-from FtpHelper import FtpHelper
+from FirestoreService import FirestoreService
+from ServerCredentials import ServerCredentials
+
+# Switch hour for the processing. Before 17 = day -1. After 17 = Current day  ServerCredentials
+SWITCH_HOUR = 17
 
 
 '''
 Main entry point for Google function
 '''
-
-
 def main(request):
     '''
     Args:
@@ -32,15 +34,16 @@ def main(request):
     tz = pytz.timezone('Europe/Paris')
     script_start_time = datetime.now(tz)
 
+    cumulativeTrackBuilder = None
+
     # ----------------------------- Parse request parameters -----------------------------
     # Cumulative Track parameters
     target_date = None
-    cumulativeTrackBuilder = None
 
     # HACK: This is used to debug localy
-    Request = type('Request', (object,), {})
-    request = Request()
-    request.args = {"targetDate": "2020_07_07"}
+    #Request = type('Request', (object,), {})
+    #request = Request()
+    #request.args = {"targetDate": "2020_07_07"}
     #request.args = {}
 
     # Parse request parameters
@@ -51,8 +54,9 @@ def main(request):
 
     # No target date : Find which date to process
     if target_date is None:
-        target_date = date(script_start_time.year,
-                           script_start_time.month, script_start_time.day)
+        target_date = date(script_start_time.year,script_start_time.month, script_start_time.day)
+        if script_start_time.hour < SWITCH_HOUR:
+            target_date = target_date - timedelta(days=1)       # Before 17:00, catchup on previous day
 
     # Log Start of the process
     print(f"##### Launching processing for: Tracemap target_date={target_date}")
@@ -65,31 +69,39 @@ def main(request):
     ftp_login = os.environ['FTP_LOGIN'].strip()
     ftp_password = os.environ['FTP_PASSWORD'].strip()
 
-    # Create output file name by adding date and time as a suffix
-    date_suffix = str(target_date.year) + "_" + str(target_date.month).zfill(2) + "_" + str(target_date.day).zfill(2)
-    output_filename = date_suffix + "-heatmap"
-    output_filename_metadata = date_suffix + "-metadata.json"
-
-    output_filename_latest = "latest-tracemap"
-    output_filename_metadata_latest = "latest-metadata.json"
-
-    output = "geojson/" + output_filename
-    output_latest = "geojson/" + output_filename_latest
-
     # ---------------------------------------------------- Cumulative Track ----------------------------------------------
-    # --- Start the process
-    ftp_client_out = FtpHelper.get_ftp_client(ftp_server_name, ftp_login, ftp_password)
+    isUpdateNeeded = False
+    return_message = "[DailyCumulativeTrackBuidler] Track up to date. No updated needeed !"
+    storageService = StorageService(target_date)
+    firestoreService = FirestoreService(target_date)
 
-    cumulativeTrackBuilder = DailyCumulativeTrackBuilder(ftp_client_out, target_date, isOutToLocalFiles=True)
+    # --- Run condition ---
+    # Find out if the list of files as been modified for the target date. If not, no need to rebuild the track
+    print(f"[DailyCumulativeTrackBuidler] Finding out if running is needed for: target_date={target_date}")
+    currentHashForDate, currentFilesList = storageService.GetFileListHashForDay()
+    lastProcessedHash = firestoreService.GetProcessedFilesHashForDay()
+    print(f"New files list / Processed files list: currentHashForDate / lastProcessedHash = {currentHashForDate} / {lastProcessedHash}")
 
-    # Run !
-    cumulativeTrackBuilder.run()
-    jsonMetadata = cumulativeTrackBuilder.JsonMetaData()
+    if (currentHashForDate != lastProcessedHash):
+        print(f"[DailyCumulativeTrackBuidler] Track needs updating ! ...")
+        isUpdateNeeded = True
+    else:
+        print(return_message)
 
-    return_message = jsonMetadata
 
-    # Disconnect FTP
-    ftp_client_out.close()
+    if (isUpdateNeeded):
+        # --- Start the process
+        ftp_client_credentials = ServerCredentials(ftp_server_name, ftp_login, ftp_password)
+        cumulativeTrackBuilder = DailyCumulativeTrackBuilder(ftp_client_credentials, target_date, fileList=currentFilesList, isOutToLocalFiles=False)
+
+        # Run !
+        cumulativeTrackBuilder.run()
+
+        # --- Update
+        firestoreService.UpdateProcessedFilesHasForDay(currentFilesList)               # Update firestore with hash of processed files
+        jsonMetadata = cumulativeTrackBuilder.JsonMetaData()
+
+        return_message = jsonMetadata
 
     return return_message
 

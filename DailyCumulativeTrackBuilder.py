@@ -23,42 +23,41 @@ from FtpHelper import *
 from RunMetadata import RunMetadata
 from RunStatistics import RunStatistics
 from DumpFileName import DumpFileName
+from FtpHelper import FtpHelper
 
 
 class DailyCumulativeTrackBuilder:
+
+    @property
+    def ProcessedFileList(self):
+        return self.fileList
+
     # --- Files dans folders ---
     FTP_TRACKS_ROOT_DIRECTORY = "tracemap/tracks/"
-    LATEST_PREFIX = "latest"
 
-    TRACKS_IMAGE_SUFFIX = "-tracks.png"
-    TRACKS_IMAGE_FILE_NAME = LATEST_PREFIX + TRACKS_IMAGE_SUFFIX
+    TRACKS_STATISTICS_FILE_NAME = "{0}-tracks-statistics.json"
 
-    TRACKS_STATISTICS_SUFFIX = "-tracks-statistics.json"
-    TRACKS_STATISTICS_FILE_NAME = LATEST_PREFIX + TRACKS_STATISTICS_SUFFIX
+    TRACKS_METADATA_FILE_NAME = "{0}-tracks-metadata.json"
 
-    TRACKS_METADATA_SUFFIX = "-tracks-metadata.json"
-    TRACKS_METADATA_FILE_NAME = LATEST_PREFIX + TRACKS_METADATA_SUFFIX
-
-    TRACKS_GEOJSON_SUFFIX = "-tracks"
-    TRACKS_GEOJSON_FILE_NAME = LATEST_PREFIX + TRACKS_GEOJSON_SUFFIX
+    TRACKS_GEOJSON_FILE_NAME = "{0}-tracks"
     TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX = TRACKS_GEOJSON_FILE_NAME + ".geojson"
 
-    TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX = "-tracks.geojson.zip"
-    TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME = LATEST_PREFIX + TRACKS_GEOJSON_ZIP_ARCHIVE_SUFFIX
+    TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME = "{0}-tracks.geojson.zip"
 
     TRACKS_LOCAL_DUMP_DIRECTORY = "D:\\llauner\src\\cumulativeTracksWeb\\tracks\\"
 
     # --- Geo information ---41.196834, 10.328174
     FRANCE_BOUNDING_BOX = [(-6.566734, 51.722775), (10.645924,51.726922), (10.328174, 41.196834), (-7.213631, 40.847787)]
 
-    def __init__(self, ftpClientOut, target_date, isOutToLocalFiles=False):
+    def __init__(self, ftpServerCredentials, target_date, fileList=None, isOutToLocalFiles=False):
         self.metaData = RunMetadata()
-        self.ftpClientOut = ftpClientOut
-        self.storageService = StorageService()
-        self.target_date = target_date
+        self.ftpServerCredentials = ftpServerCredentials
+        self.ftpClientOut = None
+        self.target_date = target_date.strftime('%Y_%m_%d')
+        self.storageService = StorageService(self.target_date)
         self.isOutToLocalFiles = isOutToLocalFiles
 
-        self.fileList = []
+        self.fileList = fileList
         self.flightsCount = None
 
         self.progressMessage = None
@@ -72,8 +71,8 @@ class DailyCumulativeTrackBuilder:
         self.geojsonFeatures = []
 
     def run(self):
-        self.fileList  = self.storageService.GetFileList(self.target_date)
-        self.fileList = self.fileList[::30]
+        if not self.fileList: self.fileList=self.storageService.GetFileListForDay(self.target_date)             # Get the list of files if not provided as argument
+
         self.metaData.flightsCount = len(self.fileList)
 
         # --- Process files to get flights
@@ -96,7 +95,7 @@ class DailyCumulativeTrackBuilder:
                     bar.progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
 
                 if self.isRunningInCloud:           # ProgressBar does not work in gcloud: pring on stdout
-                    print(bar.getLine())
+                    print(bar.progressMessage)
 
                 bar.update(i)  # Update Progress
 
@@ -129,8 +128,8 @@ class DailyCumulativeTrackBuilder:
         longitudes = lons(flight.fixes)
         latitudes = lats(flight.fixes)
         # Remove points
-        longitudes = longitudes[::100]
-        latitudes = latitudes[::100]
+        longitudes = longitudes[::10]
+        latitudes = latitudes[::10]
 
         flightPoints = list(zip(longitudes.tolist(), latitudes.tolist()))
         if len(flightPoints) < 2:
@@ -180,75 +179,63 @@ class DailyCumulativeTrackBuilder:
         flightDate = flightDate.strftime('%Y_%m_%d')
         self.runStatistics.addTimeSeries(flightDate)
 
-    def _dumpToFiles(self, fileObject=None):
+    def _dumpToFiles(self):
         """
         Dump items to files
-
-        Args:
-            fileObject ([type], optional): [description]. Defaults to None.
         """
         # --- Dump geojson file ---
-        if fileObject is None:      # Local file
-            geojsonFullFileName = DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME
-            igc2geojson.dumpFeaturesToFile(geojsonFullFileName, self.geojsonFeatures)
+        geojsonFullFileName =   DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME.format(DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + self.target_date)
+        igc2geojson.dumpFeaturesToFile(geojsonFullFileName, self.geojsonFeatures)
 
         # --- Dump image, metadata and statistics ---    
-        metadataFullFileName = DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + DailyCumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
-        statisticsFullFileName = DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + DailyCumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
+        metadataFullFileName = DailyCumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME.format(DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + self.target_date)
+        statisticsFullFileName =  DailyCumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME.format(DailyCumulativeTrackBuilder.TRACKS_LOCAL_DUMP_DIRECTORY + self.target_date)
 
         # --- Build metadata ----
         tz = pytz.timezone('Europe/Paris')
         self.metaData.setEndTime(datetime.now(tz))
 
         # Dump MetaData
-        if fileObject is None:      # Local file
-            print(f"Dump metadata to file: {metadataFullFileName}")
-            with open(metadataFullFileName, 'w') as jsonOut:
-                jsonOut.write(self.JsonMetaData())
+        print(f"Dump metadata to file: {metadataFullFileName}")
+        with open(metadataFullFileName, 'w') as jsonOut:
+            jsonOut.write(self.JsonMetaData())
 
         # --- Dump Statistics ---
-        if fileObject is None:      # Local file
-            print(f"Dump statistics to file: {statisticsFullFileName}")
-            statistics = self.runStatistics.toJson()
-            with open(statisticsFullFileName, 'w') as jsonOut:
-                jsonOut.write(statistics)
+        print(f"Dump statistics to file: {statisticsFullFileName}")
+        statistics = self.runStatistics.toJson()
+        with open(statisticsFullFileName, 'w') as jsonOut:
+            jsonOut.write(statistics)
 
 
     def _dumpToFtp(self):
         """
         Dump items to files on FTP
         """
-        latestFilenames = DumpFileName()
-        latestFilenames.TracksImageFilename = DailyCumulativeTrackBuilder.TRACKS_IMAGE_FILE_NAME
-        latestFilenames.TracksMetadataFilename = DailyCumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME
-        latestFilenames.TracksStatisticsFilename = DailyCumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME
-        latestFilenames.TracksGeojsonFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME + ".geojson"
-        latestFilenames.TracksGeojsonZipFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME
+        self.ftpClientOut = FtpHelper.get_ftp_client(self.ftpServerCredentials.ServerName, self.ftpServerCredentials.Login, self.ftpServerCredentials.Password)
 
-        # --- Test end of year and copy files if necessary
-        isLastRunOfYear = False
-        if self.metaData.script_start_time.month == 12 and self.metaData.script_start_time.day >= 20:
-            isLastRunOfYear = True
-            filenamesForYear = self._getFilenamesforTargetYear(2019)
+        latestFilenames = DumpFileName()
+        latestFilenames.TracksMetadataFilename = DailyCumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME.format(self.target_date)
+        latestFilenames.TracksStatisticsFilename = DailyCumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME.format(self.target_date)
+        latestFilenames.TracksGeojsonFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX.format(self.target_date)
+        latestFilenames.TracksGeojsonZipFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME.format(self.target_date)
 
         # -- Write to FTP
         self._writeToFTP(latestFilenames)
-        if (isLastRunOfYear):
-            self._writeToFTP(filenamesForYear)
 
         # Print result so that it's logged
         print(self.JsonMetaData())
 
+        # Disconnect FTP
+        self.ftpClientOut.close()
+
     def _writeToFTP(self, filenames):
         # Dump to FTP
-        ftpClientOut = self.ftpClientOut.getFtpClient()
 
         # --- Dump geojson ---
         # Write geojson to FTP
-        print(
-            f"Dump to FTP: {ftpClientOut.host} ->{filenames.TracksGeojsonFilename}")
+        print(f"Dump to FTP: {self.ftpClientOut.host} ->{filenames.TracksGeojsonFilename}")
         geojson = igc2geojson.getJsonFromFeatures(self.geojsonFeatures)
-        FtpHelper.dumpStringToFTP(ftpClientOut,
+        FtpHelper.dumpStringToFTP( self.ftpClientOut,
                                   DailyCumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
                                   filenames.TracksGeojsonFilename,
                                   geojson)
@@ -258,50 +245,34 @@ class DailyCumulativeTrackBuilder:
         fileBufferZip = io.BytesIO()
         zf = zipfile.ZipFile(fileBufferZip, mode="w",
                              compression=zipfile.ZIP_DEFLATED)
-        zf.writestr(
-            DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX, geojson)
+        zf.writestr(filenames.TracksGeojsonFilename, geojson)
         zf.close()
         fileBufferZip.seek(0)
 
         # Write to FTP
-        print(
-            f"Dump ZIP to FTP: {ftpClientOut.host} ->{filenames.TracksGeojsonZipFilename}")
-        FtpHelper.dumpFileToFtp(ftpClientOut,
+        print( f"Dump ZIP to FTP: { self.ftpClientOut.host} ->{filenames.TracksGeojsonZipFilename}")
+        FtpHelper.dumpFileToFtp( self.ftpClientOut,
                                 None,
                                 filenames.TracksGeojsonZipFilename,
                                 fileBufferZip)
         fileBufferZip.close()
 
-        # image
-        fileBuffer = io.BytesIO()
-        self._dumpToFiles(fileBuffer)
-        fileBuffer.seek(0)
-
-        print(
-            f"Dump to FTP: {ftpClientOut.host} ->{filenames.TracksImageFilename}")
-        FtpHelper.dumpFileToFtp(ftpClientOut,
-                                None,
-                                filenames.TracksImageFilename,
-                                fileBuffer)
-        fileBuffer.close()
 
         # metadata
-        print(
-            f"Dump to FTP: {ftpClientOut.host} ->{filenames.TracksMetadataFilename}")
-        FtpHelper.dumpStringToFTP(ftpClientOut,
+        print(f"Dump to FTP: { self.ftpClientOut.host} ->{filenames.TracksMetadataFilename}")
+        FtpHelper.dumpStringToFTP( self.ftpClientOut,
                                   None,
                                   filenames.TracksMetadataFilename,
                                   self.JsonMetaData())
 
         # --- Dump Statistics ---
-        print(
-            f"Dump to FTP: {ftpClientOut.host} ->{filenames.TracksStatisticsFilename}")
-        FtpHelper.dumpStringToFTP(ftpClientOut,
+        print(f"Dump to FTP: { self.ftpClientOut.host} ->{filenames.TracksStatisticsFilename}")
+        FtpHelper.dumpStringToFTP( self.ftpClientOut,
                                   None,
                                   filenames.TracksStatisticsFilename,
                                   self.runStatistics.toJson())
 
-        ftpClientOut.quit()
+        self.ftpClientOut.quit()
 
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
