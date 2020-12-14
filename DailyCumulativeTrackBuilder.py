@@ -32,6 +32,10 @@ class DailyCumulativeTrackBuilder:
     def ProcessedFileList(self):
         return self.fileList
 
+    @property
+    def IncludeFranceOnly(self):
+        return False
+
     # --- Files dans folders ---
     FTP_TRACKS_ROOT_DIRECTORY = "tracemap/tracks/"
 
@@ -50,7 +54,7 @@ class DailyCumulativeTrackBuilder:
     FRANCE_BOUNDING_BOX = [(-6.566734, 51.722775), (10.645924,51.726922), (10.328174, 41.196834), (-7.213631, 40.847787)]
 
     def __init__(self, ftpServerCredentials, target_date, fileList=None, isOutToLocalFiles=False):
-        self.metaData = RunMetadata()
+        self.metaData = RunMetadata(target_date)
         self.ftpServerCredentials = ftpServerCredentials
         self.ftpClientOut = None
         self.target_date = target_date.strftime('%Y_%m_%d')
@@ -90,9 +94,10 @@ class DailyCumulativeTrackBuilder:
                 # --- Build progress message and update
                 if not (i % 5):
                     msg = f"{i}/{self.metaData.flightsCount} : {filename}"
-                    bar.set_description(msg)
-                    bar.write(msg)
                     bar.update(i)  # Update Progress
+                    if self.isOutToLocalFiles:
+                        bar.set_description(msg)
+                    bar.write(msg)
 
                 # ----- Process flight -----
                 self.createFlightGeoJson(flight)
@@ -116,41 +121,45 @@ class DailyCumulativeTrackBuilder:
         Args:
             flight ([type]): [description]
         """
-        lons = np.vectorize(lambda f: f.lon)
-        lats = np.vectorize(lambda f: f.lat)
 
-        # --- Browse and plot files ---
-        longitudes = lons(flight.fixes)
-        latitudes = lats(flight.fixes)
-        # Remove points
-        longitudes = longitudes[::10]
-        latitudes = latitudes[::10]
+        # --- Inside France detection ---
+        isInsindeFrance = True
+        if self.IncludeFranceOnly:
+            lons = np.vectorize(lambda f: f.lon)
+            lats = np.vectorize(lambda f: f.lat)
 
-        flightPoints = list(zip(longitudes.tolist(), latitudes.tolist()))
-        if len(flightPoints) < 2:
-            return
+            longitudes = lons(flight.fixes)
+            latitudes = lats(flight.fixes)
+            # Remove points
+            longitudes = longitudes[::50]
+            latitudes = latitudes[::50]
 
-        flightLineString = LineString(flightPoints)
+            flightPoints = list(zip(longitudes.tolist(), latitudes.tolist()))
+            if len(flightPoints) < 2:
+                return
 
-        geoSeries = GeoSeries(flightLineString)
-        geoSeries.crs = "EPSG:3857"
+            flightLineString = LineString(flightPoints)
+            isInsindeFrance = self.franceBoundingBox.contains(flightLineString)
+
+            del lons
+            del lats
+            del longitudes
+            del latitudes
+            del flightPoints
+            del flightLineString
 
         # --- Reduce number of fixes ---
         fixes = np.array(flight.fixes)
         del flight.fixes
 
-        fixes = fixes[::100]
+        fixes = fixes[::50]
         flight.fixes = fixes.tolist()
 
         # ----- Filter -----
         isFlightOK = True
         # Check that the flight time is > 45 min
         isDurationOk = flight.duration/60 >= 45
-        isFlightOK = isFlightOK and isDurationOk
-        # Check that the flight is inside the France polygon
-        if isFlightOK:
-            isInsindeFrance = self.franceBoundingBox.contains(flightLineString)
-            isFlightOK = isFlightOK and isInsindeFrance
+        isFlightOK = isFlightOK and isDurationOk and isInsindeFrance
 
         if isFlightOK:
             feature = igc2geojson.get_geojson_feature_track_collection_simple(flight)
@@ -159,14 +168,6 @@ class DailyCumulativeTrackBuilder:
             self.metaData.processedFlightsCount += 1
             self.addFlightToStatistics(flight)
             del feature
-
-        del lons
-        del lats
-        del longitudes
-        del latitudes
-        del flightPoints
-        del flightLineString
-        del geoSeries
 
 
     def addFlightToStatistics(self, flight):
