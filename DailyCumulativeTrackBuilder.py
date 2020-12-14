@@ -16,7 +16,7 @@ import geopandas as gpd
 from geopandas import GeoDataFrame, GeoSeries
 import pandas as pd
 import mplleaflet
-import progressbar
+from tqdm import tqdm
 
 from StorageService import *
 from FtpHelper import *
@@ -75,7 +75,7 @@ class DailyCumulativeTrackBuilder:
 
         # --- Process files to get flights
         if self.fileList:
-            bar = progressbar.ProgressBar(max_value=self.metaData.flightsCount)
+            bar = tqdm(total=self.metaData.flightsCount)
 
             for i, filename in enumerate(self.fileList):
                 file_as_bytesio = self.storageService.GetFileAsString(filename)
@@ -86,23 +86,18 @@ class DailyCumulativeTrackBuilder:
 
                 if flight.date_timestamp:
                     flight_date = datetime.fromtimestamp(flight.date_timestamp).date()
+
                 # --- Build progress message and update
-                if flight.valid and flight_date:
-                    bar.progressMessage = "{}".format(filename)
-                else:
-                    bar.progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
-
-                if self.isRunningInCloud:           # ProgressBar does not work in gcloud: pring on stdout
-                    print(bar.progressMessage)
-
-                bar.update(i)  # Update Progress
+                if not (i % 5):
+                    bar.set_description(f"{filename}")
+                    bar.update(i)  # Update Progress
 
                 # ----- Process flight -----
                 self.createFlightGeoJson(flight)
                 
                 del flight
 
-            bar.finish()    # End Progress
+            bar.close()    # End Progress
 
 
         if self.isOutToLocalFiles:      # Dump to local files
