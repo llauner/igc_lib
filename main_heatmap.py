@@ -278,7 +278,7 @@ def main(request):
 
 if __name__ == "__main__":
     try:
-        res = main(None)
+        res = go(None)
         print(res)
     except SystemExit as e:
         if not e is None:

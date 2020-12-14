@@ -16,7 +16,6 @@ import geopandas as gpd
 from geopandas import GeoDataFrame, GeoSeries
 import pandas as pd
 import mplleaflet
-import progressbar
 
 from FtpHelper import *
 from RunMetadata import RunMetadata
@@ -119,8 +118,6 @@ class CumulativeTrackBuilder:
 
         # --- Process files to get flights
         if allFiles:
-            bar = progressbar.ProgressBar(max_value=self.metaData.flightsCount)
-
             for i, filename in enumerate(allFiles):
 
                 computedFileName = None
@@ -141,29 +138,25 @@ class CumulativeTrackBuilder:
                 if flight.date_timestamp:
                     flight_date = datetime.fromtimestamp(flight.date_timestamp).date()
                 # --- Build progress message and update
+                progressMessage = ""
                 if flight.valid and flight_date:
                     if computedFileName:
-                        bar.progressMessage = "{} -> {}".format(filename, computedFileName)
+                        progressMessage = "{} -> {}".format(filename, computedFileName)
                     else:
-                        bar.progressMessage = "{}".format(filename)
+                        progressMessage = "{}".format(filename)
                 else:
                     if computedFileName:
-                        bar.progressMessage = "{} -> {} \t Discarded ! valid={}".format(filename, computedFileName, flight.valid)
+                        progressMessage = "{} -> {} \t Discarded ! valid={}".format(filename, computedFileName, flight.valid)
                     else:
-                        bar.progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
+                        progressMessage = "{} \t Discarded ! valid={}".format(filename, flight.valid)
 
-                if self.isRunningInCloud:           # ProgressBar does not work in gcloud: pring on stdout
-                    print(bar.getLine())
-
-                bar.update(i)  # Update Progress
+                print(progressMessage)
 
                 # ----- Process flight -----
                 #self.createFlightImage(flight)
                 self.createFlightGeoJson(flight)
                 
                 del flight
-
-            bar.finish()    # End Progress
 
             # --- Save bounding box ---
             #self.metaData.boundingBoxUpperLeft = [self.axes.dataLim.extents[1], self.axes.dataLim.extents[0]]
