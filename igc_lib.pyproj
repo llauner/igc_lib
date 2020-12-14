@@ -49,6 +49,7 @@ GOOGLE_APPLICATION_CREDENTIALS=D:\llauner\GoogleCloud_Credentials\Service_Accoun
     <Compile Include="main.py" />
     <Compile Include="main_heatmap.py" />
     <Compile Include="ProcessingType.py" />
+    <Compile Include="RunMetadataTracks.py" />
     <Compile Include="RunMetadata.py" />
     <Compile Include="RunStatistics.py" />
     <Compile Include="ServerCredentials.py">

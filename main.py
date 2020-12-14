@@ -43,7 +43,7 @@ def main(request):
     # HACK: This is used to debug localy
     #Request = type('Request', (object,), {})
     #request = Request()
-    #request.args = {"targetDate": "2020_03_12"}
+    #request.args = {"targetDate": "2020_07_07"}
     #request.args = {}
 
     # Parse request parameters

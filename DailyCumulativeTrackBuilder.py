@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 from StorageService import *
 from FtpHelper import *
-from RunMetadata import RunMetadata
+from RunMetadataTracks import RunMetadataTracks
 from RunStatistics import RunStatistics
 from DumpFileName import DumpFileName
 from FtpHelper import FtpHelper
@@ -54,7 +54,7 @@ class DailyCumulativeTrackBuilder:
     FRANCE_BOUNDING_BOX = [(-6.566734, 51.722775), (10.645924,51.726922), (10.328174, 41.196834), (-7.213631, 40.847787)]
 
     def __init__(self, ftpServerCredentials, target_date, fileList=None, isOutToLocalFiles=False):
-        self.metaData = RunMetadata(target_date)
+        self.metaData = RunMetadataTracks(target_date)
         self.ftpServerCredentials = ftpServerCredentials
         self.ftpClientOut = None
         self.target_date = target_date.strftime('%Y_%m_%d')
@@ -94,9 +94,9 @@ class DailyCumulativeTrackBuilder:
                 # --- Build progress message and update
                 if not (i % 5):
                     msg = f"{i}/{self.metaData.flightsCount} : {filename}"
-                    bar.update(i)  # Update Progress
                     if self.isOutToLocalFiles:
                         bar.set_description(msg)
+                        bar.update(i)  # Update Progress
                     bar.write(msg)
 
                 # ----- Process flight -----
@@ -189,7 +189,7 @@ class DailyCumulativeTrackBuilder:
 
         # --- Build metadata ----
         tz = pytz.timezone('Europe/Paris')
-        self.metaData.setEndTime(datetime.now(tz))
+        self.metaData.script_end_time= datetime.now(tz)
 
         # Dump MetaData
         print(f"Dump metadata to file: {metadataFullFileName}")
