@@ -89,7 +89,9 @@ class DailyCumulativeTrackBuilder:
 
                 # --- Build progress message and update
                 if not (i % 5):
-                    bar.set_description(f"{filename}")
+                    msg = f"{i}/{self.metaData.flightsCount} : {filename}"
+                    bar.set_description(msg)
+                    bar.write(msg)
                     bar.update(i)  # Update Progress
 
                 # ----- Process flight -----
