@@ -245,6 +245,9 @@ class DailyCumulativeTrackBuilder:
         fileBufferZip.close()
 
 
+        # --- Build metadata ----
+        tz = pytz.timezone('Europe/Paris')
+        self.metaData.script_end_time= datetime.now(tz)
         # metadata
         print(f"Dump to FTP: { self.ftpClientOut.host} ->{filenames.TracksMetadataFilename}")
         FtpHelper.dumpStringToFTP( self.ftpClientOut,

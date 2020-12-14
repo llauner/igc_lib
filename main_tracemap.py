@@ -43,7 +43,7 @@ def main(request):
     # HACK: This is used to debug localy
     #Request = type('Request', (object,), {})
     #request = Request()
-    #request.args = {"targetDate": "2020_07_09"}
+    #request.args = {"targetDate": "2020_07_10"}
     #request.args = {}
 
     # Parse request parameters
@@ -87,7 +87,6 @@ def main(request):
         isUpdateNeeded = True and currentFilesList
     else:
         print(return_message)
-
 
     if (isUpdateNeeded):
         # --- Start the process
