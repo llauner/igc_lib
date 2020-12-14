@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3ce3535a-7699-4d76-a7fb-f5e6bafe087b}</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>main_heatmap.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -46,7 +46,7 @@ GOOGLE_APPLICATION_CREDENTIALS=D:\llauner\GoogleCloud_Credentials\Service_Accoun
     <Compile Include="lib\geo.py" />
     <Compile Include="lib\viterbi.py" />
     <Compile Include="lib\__init__.py" />
-    <Compile Include="main_tracemap.py" />
+    <Compile Include="main.py" />
     <Compile Include="main_heatmap.py" />
     <Compile Include="ProcessingType.py" />
     <Compile Include="RunMetadata.py" />

@@ -11,4 +11,4 @@ geopandas >= 0.7.0
 pandas >= 1.0.3
 mplleaflet >= 0.0.5
 progress
-progressbar
+progressbar2
