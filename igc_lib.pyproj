@@ -58,7 +58,6 @@ GOOGLE_APPLICATION_CREDENTIALS=D:\llauner\GoogleCloud_Credentials\Service_Accoun
     <Compile Include="ServerCredentials.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="staticMap.py" />
     <Compile Include="FirestoreService.py" />
     <Compile Include="StorageService.py">
       <SubType>Code</SubType>
