@@ -16,7 +16,6 @@ import geopandas as gpd
 from geopandas import GeoDataFrame, GeoSeries
 import pandas as pd
 import mplleaflet
-from tqdm import tqdm
 
 from StorageService import *
 from FtpHelper import *
@@ -79,8 +78,6 @@ class DailyCumulativeTrackBuilder:
 
         # --- Process files to get flights
         if self.fileList:
-            bar = tqdm(total=self.metaData.flightsCount)
-
             for i, filename in enumerate(self.fileList):
                 file_as_bytesio = self.storageService.GetFileAsString(filename)
 
@@ -93,19 +90,13 @@ class DailyCumulativeTrackBuilder:
 
                 # --- Build progress message and update
                 if not (i % 5):
-                    msg = f"{i}/{self.metaData.flightsCount} : {filename}"
-                    if self.isOutToLocalFiles:
-                        bar.set_description(msg)
-                        bar.update(i)  # Update Progress
-                    bar.write(msg)
+                    print(f"{i}/{self.metaData.flightsCount} : {filename}")
+                    
 
                 # ----- Process flight -----
                 self.createFlightGeoJson(flight)
                 
                 del flight
-
-            bar.close()    # End Progress
-
 
         if self.isOutToLocalFiles:      # Dump to local files
             self._dumpToFiles()
