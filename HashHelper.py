@@ -13,7 +13,7 @@ class HashHelper(object):
         list -- the list to be hashed
         '''
 
-        if (list is None):
+        if (list is None or not list):
             return None
 
         sorted_list = sorted(list)

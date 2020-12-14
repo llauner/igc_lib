@@ -43,7 +43,7 @@ def main(request):
     # HACK: This is used to debug localy
     #Request = type('Request', (object,), {})
     #request = Request()
-    #request.args = {"targetDate": "2020_07_07"}
+    #request.args = {"targetDate": "2020_12_12"}
     #request.args = {}
 
     # Parse request parameters
@@ -84,7 +84,7 @@ def main(request):
 
     if (currentHashForDate != lastProcessedHash):
         print(f"[DailyCumulativeTrackBuidler] Track needs updating ! ...")
-        isUpdateNeeded = True
+        isUpdateNeeded = True and currentFilesList
     else:
         print(return_message)
 
@@ -96,12 +96,12 @@ def main(request):
 
         # Run !
         cumulativeTrackBuilder.run()
-
-        # --- Update
-        firestoreService.UpdateProcessedFilesHasForDay(currentFilesList)               # Update firestore with hash of processed files
         jsonMetadata = cumulativeTrackBuilder.JsonMetaData()
 
         return_message = jsonMetadata
+
+    # --- Update Firestore progress DB
+    firestoreService.UpdateProcessedFilesHasForDay(currentFilesList)               # Update firestore with hash of processed files
 
     return return_message
 

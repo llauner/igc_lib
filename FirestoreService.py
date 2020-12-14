@@ -43,8 +43,10 @@ class FirestoreService(object):
         doc_ref = self.db.collection(FirestoreService.FirestoreCollectionName).document(FirestoreService.FirestoreDocumentName)
         snapshot = doc_ref.get()
 
-        new_hash = HashHelper.ComputeHashForList(file_list)
+        new_hash = HashHelper.ComputeHashForList(file_list) if file_list else None
         field_update = { f"{FirestoreService.FirestoreFieldName}.{self.target_date}" : new_hash }
+
         doc_ref.update(field_update)
         print(f"Updated hash for target date: {self.target_date} : {new_hash}")
+ 
 
