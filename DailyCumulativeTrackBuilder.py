@@ -71,8 +71,6 @@ class DailyCumulativeTrackBuilder:
         self.geojsonFeatures = []
 
     def run(self):
-        if not self.fileList: self.fileList=self.storageService.GetFileListForDay(self.target_date)             # Get the list of files if not provided as argument
-
         self.metaData.flightsCount = len(self.fileList)
 
         # --- Process files to get flights
