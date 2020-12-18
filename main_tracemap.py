@@ -41,9 +41,9 @@ def main(request):
     target_date = None
 
     # HACK: This is used to debug localy
-    #Request = type('Request', (object,), {})
-    #request = Request()
-    #request.args = {"targetDate": "2020_07_10"}
+    Request = type('Request', (object,), {})
+    request = Request()
+    request.args = {"targetDate": "2020_07_12"}
     #request.args = {}
 
     # Parse request parameters
@@ -82,6 +82,7 @@ def main(request):
     lastProcessedHash = firestoreService.GetProcessedFilesHashForDay()
     print(f"New files list / Processed files list: currentHashForDate / lastProcessedHash = {currentHashForDate} / {lastProcessedHash}")
 
+    # Start processing if needed
     if (currentHashForDate != lastProcessedHash):
         print(f"[DailyCumulativeTrackBuidler] Track needs updating ! ...")
         isUpdateNeeded = True and currentFilesList
@@ -100,7 +101,9 @@ def main(request):
         return_message = jsonMetadata
 
     # --- Update Firestore progress DB
-    firestoreService.UpdateProcessedFilesHasForDay(currentFilesList)               # Update firestore with hash of processed files
+    firestoreService.UpdateProcessedFilesHasForDay(currentFilesList)                        # Update firestore with hash of processed files
+    if (cumulativeTrackBuilder):
+        firestoreService.updateFilesStatisticsForDay(cumulativeTrackBuilder.runStatistics)      # Update firestore with statistics
 
     return return_message
 

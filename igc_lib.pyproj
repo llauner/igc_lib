@@ -21,7 +21,7 @@ FTP_PASSWORD_IGC=IGC2020Sw7qo
 FTP_SERVER_NAME=ftp.p4950.webmo.fr
 FTP_LOGIN=p4950_DG800ludo
 FTP_PASSWORD=SIx4m8nu_
-GOOGLE_APPLICATION_CREDENTIALS=D:\llauner\GoogleCloud_Credentials\Service_Account_Key-igcheatmap-f012be117f9c.json</Environment>
+GOOGLE_APPLICATION_CREDENTIALS=C:\llauner\GoogleCloud_Credentials\Service_Account_Key-igcheatmap-f012be117f9c.json</Environment>
     <TestFramework>Pytest</TestFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -54,6 +54,7 @@ GOOGLE_APPLICATION_CREDENTIALS=D:\llauner\GoogleCloud_Credentials\Service_Accoun
     <Compile Include="ProcessingType.py" />
     <Compile Include="RunMetadataTracks.py" />
     <Compile Include="RunMetadata.py" />
+    <Compile Include="DailyRunStatistics.py" />
     <Compile Include="RunStatistics.py" />
     <Compile Include="ServerCredentials.py">
       <SubType>Code</SubType>

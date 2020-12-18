@@ -20,7 +20,7 @@ import mplleaflet
 from StorageService import *
 from FtpHelper import *
 from RunMetadataTracks import RunMetadataTracks
-from RunStatistics import RunStatistics
+from DailyRunStatistics import DailyRunStatistics
 from DumpFileName import DumpFileName
 from FtpHelper import FtpHelper
 
@@ -70,7 +70,7 @@ class DailyCumulativeTrackBuilder:
         self.isRunningInCloud = not self.isOutToLocalFiles
 
         # Statistics
-        self.runStatistics = RunStatistics()
+        self.runStatistics = DailyRunStatistics()
         self.geojsonFeatures = []
 
     def run(self):
@@ -147,24 +147,21 @@ class DailyCumulativeTrackBuilder:
         flight.fixes = fixes.tolist()
 
         # ----- Filter -----
-        isFlightOK = True
         # Check that the flight time is > 45 min
         isDurationOk = flight.duration/60 >= 45
-        isFlightOK = isFlightOK and isDurationOk and isInsindeFrance
+        isFlightOK = flight.valid and isDurationOk and isInsindeFrance
 
         if isFlightOK:
             feature = igc2geojson.get_geojson_feature_track_collection_simple(flight)
             self.geojsonFeatures.append(feature)
 
             self.metaData.processedFlightsCount += 1
-            self.addFlightToStatistics(flight)
+            self.addFlightToStatistics()
             del feature
 
 
-    def addFlightToStatistics(self, flight):
-        flightDate = datetime.fromtimestamp(flight.date_timestamp).date()
-        flightDate = flightDate.strftime('%Y_%m_%d')
-        self.runStatistics.addTimeSeries(flightDate)
+    def addFlightToStatistics(self):
+        self.runStatistics.flightsCount += 1
 
     def _dumpToFiles(self):
         """
@@ -202,7 +199,6 @@ class DailyCumulativeTrackBuilder:
 
         latestFilenames = DumpFileName()
         latestFilenames.TracksMetadataFilename = DailyCumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME.format(self.target_date)
-        latestFilenames.TracksStatisticsFilename = DailyCumulativeTrackBuilder.TRACKS_STATISTICS_FILE_NAME.format(self.target_date)
         latestFilenames.TracksGeojsonFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX.format(self.target_date)
         latestFilenames.TracksGeojsonZipFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME.format(self.target_date)
 
@@ -219,13 +215,14 @@ class DailyCumulativeTrackBuilder:
         # Dump to FTP
 
         # --- Dump geojson ---
-        # Write geojson to FTP
-        print(f"Dump to FTP: {self.ftpClientOut.host} ->{filenames.TracksGeojsonFilename}")
         geojson = igc2geojson.getJsonFromFeatures(self.geojsonFeatures)
-        FtpHelper.dumpStringToFTP( self.ftpClientOut,
-                                  DailyCumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
-                                  filenames.TracksGeojsonFilename,
-                                  geojson)
+        ## Write geojson to FTP
+        #print(f"Dump to FTP: {self.ftpClientOut.host} ->{filenames.TracksGeojsonFilename}")
+        #FtpHelper.dumpStringToFTP( self.ftpClientOut,
+        #                          DailyCumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
+        #                          filenames.TracksGeojsonFilename,
+        #                          geojson)
+        
 
         # Write ZIP to FTP
         # Create zip file
@@ -239,7 +236,7 @@ class DailyCumulativeTrackBuilder:
         # Write to FTP
         print( f"Dump ZIP to FTP: { self.ftpClientOut.host} ->{filenames.TracksGeojsonZipFilename}")
         FtpHelper.dumpFileToFtp( self.ftpClientOut,
-                                None,
+                                DailyCumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
                                 filenames.TracksGeojsonZipFilename,
                                 fileBufferZip)
         fileBufferZip.close()
@@ -255,14 +252,10 @@ class DailyCumulativeTrackBuilder:
                                   filenames.TracksMetadataFilename,
                                   self.JsonMetaData())
 
-        # --- Dump Statistics ---
-        print(f"Dump to FTP: { self.ftpClientOut.host} ->{filenames.TracksStatisticsFilename}")
-        FtpHelper.dumpStringToFTP( self.ftpClientOut,
-                                  None,
-                                  filenames.TracksStatisticsFilename,
-                                  self.runStatistics.toJson())
-
         self.ftpClientOut.quit()
+
+        del geojson
+        del self.geojsonFeatures
 
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)

@@ -11,6 +11,8 @@ class FirestoreService(object):
     FirestoreDocumentName =  '{0}_dailyCumulativeTrackBuilder'
     FirestoreFieldName = 'processedDays'
 
+    FirestoreStatisticsFieldName = "statistics"
+
     def __init__(self, target_date):
         current_year = datetime.datetime.now().year
         self.db = firestore.Client()
@@ -48,5 +50,24 @@ class FirestoreService(object):
 
         doc_ref.update(field_update)
         print(f"Updated hash for target date: {self.target_date} : {new_hash}")
+
+
+    def updateFilesStatisticsForDay(self, dailyRunStatistics):
+        """Update the hash for the target date
+
+        Keyword arguments:
+        file_list --- the sorted list of processed files
+        target_date -- the target date
+        """
+
+        if (dailyRunStatistics):
+            doc_ref = self.db.collection(FirestoreService.FirestoreCollectionName).document(FirestoreService.FirestoreDocumentName)
+            snapshot = doc_ref.get()
+
+            field_update = { f"{FirestoreService.FirestoreStatisticsFieldName}.{self.target_date}" : dailyRunStatistics.flightsCount }
+
+            doc_ref.update(field_update)
+            print(f"Updated statistics for target date: {self.target_date} : {dailyRunStatistics.flightsCount}")
+
  
 
