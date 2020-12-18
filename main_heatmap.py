@@ -64,7 +64,7 @@ def main(request):
     #request.args = {"dryRun": False, "catchupOnPreviousDay": True}
     # As executed after 17:00 every day = Will generate map for the day with flights of the day
     #request.args = {}
-    request.args = {"isTrack": True}
+    #request.args = {"isTrack": True}
 
     # Parse request parameters
     # ----- Heatmap -----
