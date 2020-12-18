@@ -41,9 +41,9 @@ def main(request):
     target_date = None
 
     # HACK: This is used to debug localy
-    Request = type('Request', (object,), {})
-    request = Request()
-    request.args = {"targetDate": "2020_07_12"}
+    #Request = type('Request', (object,), {})
+    #request = Request()
+    #request.args = {"targetDate": "2020_07_12"}
     #request.args = {}
 
     # Parse request parameters
