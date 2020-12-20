@@ -191,7 +191,7 @@ def dump_to_ftp(ftp_client, output_directory, output_filename, list_thermals):
     geojson_file_content = str(feature_collection)
 
     content_as_bytes = BytesIO(bytes(geojson_file_content, encoding='utf-8'))
-    output_filename = '{}.geojson'.format(output_filename)
+    #output_filename = '{}.geojson'.format(output_filename)
 
     # cd to directory
     if output_directory:

@@ -35,8 +35,6 @@ class RunMetadata(object):
         self.flightsCount = 0
         self.processedFlightsCount = 0
         self.thermalsCount = 0
-        self.boundingBoxUpperLeft = []
-        self.boundingBoxLowerRight = []
 
     def setEndTime(self, script_end_time):
         if self.endDate is None:

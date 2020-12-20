@@ -63,8 +63,6 @@ class DailyCumulativeTrackBuilder:
         self.fileList = fileList
         self.flightsCount = None
 
-        self.progressMessage = None
-
         self.franceBoundingBox = Polygon(self.FRANCE_BOUNDING_BOX)
 
         self.isRunningInCloud = not self.isOutToLocalFiles
@@ -246,11 +244,7 @@ class DailyCumulativeTrackBuilder:
         tz = pytz.timezone('Europe/Paris')
         self.metaData.script_end_time= datetime.now(tz)
         # metadata
-        print(f"Dump to FTP: { self.ftpClientOut.host} ->{filenames.TracksMetadataFilename}")
-        FtpHelper.dumpStringToFTP( self.ftpClientOut,
-                                  None,
-                                  filenames.TracksMetadataFilename,
-                                  self.JsonMetaData())
+        
 
         self.ftpClientOut.quit()
 

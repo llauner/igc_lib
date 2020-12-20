@@ -33,9 +33,11 @@ GOOGLE_APPLICATION_CREDENTIALS=C:\llauner\GoogleCloud_Credentials\Service_Accoun
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="HeatmapBuilder.py" />
     <Compile Include="DailyCumulativeTrackBuilder.py" />
     <Compile Include="CumulativeTrackBuilder.py" />
     <Compile Include="DumpFileName.py" />
+    <Compile Include="HeatmapFirestoreService.py" />
     <Compile Include="FtpHelper.py" />
     <Compile Include="HashHelper.py">
       <SubType>Code</SubType>
@@ -51,7 +53,6 @@ GOOGLE_APPLICATION_CREDENTIALS=C:\llauner\GoogleCloud_Credentials\Service_Accoun
     </Compile>
     <Compile Include="main_tracemap.py" />
     <Compile Include="main_heatmap.py" />
-    <Compile Include="ProcessingType.py" />
     <Compile Include="RunMetadataTracks.py" />
     <Compile Include="RunMetadata.py" />
     <Compile Include="DailyRunStatistics.py" />
