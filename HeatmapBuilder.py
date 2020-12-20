@@ -70,9 +70,9 @@ class HeatmapBuilder:
                         t.exit_fix.flight = None
                         t.enter_fix.flight = None
                     self.global_thermals.extend(flight.thermals)
-                    print(f"{i+1}/{self.flightsCount} :{filename} -> Thermals#={len(flight.thermals)}")
+                    print(f"{i+1}/{len(self.fileList)} :{filename} -> Thermals#={len(flight.thermals)}")
                 else:
-                    print(f"{i+1}/{self.flightsCount} :{filename} -> Discarded ! valid={flight.valid} date={self.str_target_date}")
+                    print(f"{i+1}/{len(self.fileList)} :{filename} -> Discarded ! valid={flight.valid} date={self.str_target_date}")
                 del flight
 
             # Metadata
@@ -94,8 +94,8 @@ class HeatmapBuilder:
         self.ftpClientOut = FtpHelper.get_ftp_client(self.ftpServerCredentials.ServerName, self.ftpServerCredentials.Login, self.ftpServerCredentials.Password)
 
         latestFilenames = HeatmapDumpFileName()
-        latestFilenames.TracksMetadataFilename = HeatmapBuilder.GEOJSON_METADATA_FILE_NAME.format(self.target_date)
-        latestFilenames.HeatmapGeojsonFilename = HeatmapBuilder.HEATMAP_GEOJSON_FILE_NAME.format(self.target_date)
+        latestFilenames.HeatmapMetadataFilename = HeatmapBuilder.GEOJSON_METADATA_FILE_NAME.format(self.str_target_date)
+        latestFilenames.HeatmapGeojsonFilename = HeatmapBuilder.HEATMAP_GEOJSON_FILE_NAME.format(self.str_target_date)
     
 
         # -- Write to FTP
@@ -112,13 +112,13 @@ class HeatmapBuilder:
 
         # --- Dump geojson ---
         igc2geojson.dump_to_ftp(self.ftpClientOut, HeatmapBuilder.FTP_GEOJSON_ROOT_DIRECTORY, filenames.HeatmapGeojsonFilename, self.global_thermals)
-        print(f"GeoJson output to FTP: {self.ftpClientOut.host} -> { filenames.HeatmapGeojsonFilename}")
+        print(f"GeoJson output to FTP: {self.ftpClientOut.host} -> {filenames.HeatmapGeojsonFilename}")
 
         # --- Dump metadata ---
         print(f"Dump to FTP: {self.ftpClientOut.host} ->{filenames.HeatmapMetadataFilename}")
         FtpHelper.dumpStringToFTP(self.ftpClientOut,
                                   None,
-                                  filenames.TracksMetadataFilename,
+                                  filenames.HeatmapMetadataFilename,
                                   self.metaData.toJSON())
 
         self.ftpClientOut.quit()

@@ -48,7 +48,7 @@ def main(request):
     # HACK: This is used to debug localy
     #Request = type('Request', (object,), {})
     #request = Request()
-    #request.args = {"targetDate": "2020_05_13"}
+    #request.args = {"targetDate": "2020_05_12"}
     #request.args = {}
 
 
@@ -102,10 +102,10 @@ def main(request):
         # --- Start the process
         ftp_client_credentials = ServerCredentials(ftp_server_name, ftp_login, ftp_password)
         heatmapBuilder = HeatmapBuilder(ftp_client_credentials, target_date, currentFilesList)
-        return_message = heatmapBuilder.metaData.toJSON()
 
         # Run !
         heatmapBuilder.run()
+        return_message = heatmapBuilder.metaData.toJSON()
 
     # --- Update Firestore progress DB
     firestoreService.UpdateProcessedFilesHasForDay(currentFilesList)                        # Update firestore with hash of processed files
