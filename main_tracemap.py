@@ -1,5 +1,6 @@
 from datetime import datetime, date, time, timedelta
 from dateutil import parser
+from dateutil.rrule import rrule, DAILY
 from io import BytesIO
 import os
 import igc2geojson
@@ -16,6 +17,28 @@ from ServerCredentials import ServerCredentials
 
 # Switch hour for the processing. Before 17 = day -1. After 17 = Current day  ServerCredentials
 SWITCH_HOUR = 17
+PAST_DAYS_TO_CATCHUP = 15
+
+def main_catchup(request):
+    '''
+    Catchup on tracemap for the past 15 days
+    Re-run the build for each of the past days
+    '''
+     # Get current time in the right time-zone
+    tz = pytz.timezone('Europe/Paris')
+    end_date = datetime.now(tz)
+    start_date = end_date - timedelta(days=PAST_DAYS_TO_CATCHUP)
+
+    for dt in rrule(DAILY, dtstart=start_date, until=end_date):
+        targetDate = dt.strftime("%Y_%m_%d")
+        print(f"[CumulativeTrackBuilder] Catching up for targetDate={targetDate}")
+
+        Request = type('Request', (object,), {})
+        request = Request()
+        request.args = {"targetDate": targetDate}
+
+        main(request)
+    
 
 
 '''

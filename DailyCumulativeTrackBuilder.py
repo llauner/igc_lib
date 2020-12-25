@@ -156,6 +156,8 @@ class DailyCumulativeTrackBuilder:
             self.metaData.processedFlightsCount += 1
             self.addFlightToStatistics()
             del feature
+        else:
+            print(f"File Discarder: isValid={flight.valid} isDurationOk={isDurationOk}")
 
 
     def addFlightToStatistics(self):

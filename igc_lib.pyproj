@@ -48,6 +48,7 @@ GOOGLE_APPLICATION_CREDENTIALS=C:\llauner\GoogleCloud_Credentials\Service_Accoun
     <Compile Include="lib\geo.py" />
     <Compile Include="lib\viterbi.py" />
     <Compile Include="lib\__init__.py" />
+    <Compile Include="main_catchupOnDays.py" />
     <Compile Include="main.py">
       <SubType>Code</SubType>
     </Compile>
