@@ -8,7 +8,10 @@ class StorageService(object):
     """description of class"""
 
     def __init__(self, target_date):
-        self.target_date = target_date = target_date.strftime('%Y_%m_%d') if not isinstance(target_date, str) else target_date
+        if target_date:
+            self.target_date = target_date = target_date.strftime('%Y_%m_%d') if not isinstance(target_date, str) else target_date
+        else:
+            self.target_date = None
         current_year = datetime.datetime.now().year
         self.storage_client = storage.Client()
         self.bucket_name = f"netcoupe-igc-{current_year}"
@@ -52,3 +55,15 @@ class StorageService(object):
         f.seek(0)
 
         return f
+
+    def GetFileFullpathFromName(self, filename):
+        '''
+        Get the file fullpath for a given filename
+        '''
+        blobs = list(self.storage_client.list_blobs(self.bucket_name, fields='items(name),nextPageToken'))
+        filesFound = [x for x in blobs if filename in x.name]
+
+        if (len(filesFound)>0):
+            return filesFound[0].name
+        else:
+            return None
