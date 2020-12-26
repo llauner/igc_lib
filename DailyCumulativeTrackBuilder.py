@@ -141,7 +141,7 @@ class DailyCumulativeTrackBuilder:
         fixes = np.array(flight.fixes)
         del flight.fixes
 
-        fixes = fixes[::50]
+        fixes = fixes[::2]
         flight.fixes = fixes.tolist()
 
         # ----- Filter -----
