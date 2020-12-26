@@ -141,7 +141,7 @@ class DailyCumulativeTrackBuilder:
         fixes = np.array(flight.fixes)
         del flight.fixes
 
-        fixes = fixes[::2]
+        fixes = fixes[::4]
         flight.fixes = fixes.tolist()
 
         # ----- Filter -----
@@ -243,10 +243,14 @@ class DailyCumulativeTrackBuilder:
 
 
         # --- Build metadata ----
+        print( f"Dump Metadata to FTP: { self.ftpClientOut.host} ->{filenames.TracksMetadataFilename}")
         tz = pytz.timezone('Europe/Paris')
         self.metaData.script_end_time= datetime.now(tz)
         # metadata
-        
+        FtpHelper.dumpStringToFTP(self.ftpClientOut,
+                                  None,
+                                  filenames.TracksMetadataFilename,
+                                  self.JsonMetaData())
 
         self.ftpClientOut.quit()
 
