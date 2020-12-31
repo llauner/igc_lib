@@ -203,7 +203,7 @@ class DailyCumulativeTrackBuilder:
         latestFilenames.TracksGeojsonZipFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME.format(self.target_date)
 
         # -- Write to FTP
-        self._writeToFTP(latestFilenames)
+        self._write_to_FTP_and_gcp_bucket(latestFilenames)
 
         # Print result so that it's logged
         print(self.JsonMetaData())
@@ -211,7 +211,7 @@ class DailyCumulativeTrackBuilder:
         # Disconnect FTP
         self.ftpClientOut.close()
 
-    def _writeToFTP(self, filenames):
+    def _write_to_FTP_and_gcp_bucket(self, filenames):
         # Dump to FTP
 
         # --- Dump geojson ---
@@ -233,13 +233,22 @@ class DailyCumulativeTrackBuilder:
         zf.close()
         fileBufferZip.seek(0)
 
+         # Upload to GCP Bucket
+        print( f"Dump ZIP to GCP Storage Bucket: {StorageService.Trace_aggregator_bucket_name} / {StorageService.Trace_aggregator_backlog_folder_name} / {filenames.TracksGeojsonZipFilename}")
+        self.storageService.UploadFileToBucket(fileBufferZip, StorageService.Trace_aggregator_bucket_name, StorageService.Trace_aggregator_backlog_folder_name, filenames.TracksGeojsonZipFilename)
+        fileBufferZip.seek(0)
+
         # Write to FTP
         print( f"Dump ZIP to FTP: { self.ftpClientOut.host} ->{filenames.TracksGeojsonZipFilename}")
         FtpHelper.dumpFileToFtp( self.ftpClientOut,
                                 DailyCumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
                                 filenames.TracksGeojsonZipFilename,
                                 fileBufferZip)
+
+       
+
         fileBufferZip.close()
+
 
 
         # --- Build metadata ----
