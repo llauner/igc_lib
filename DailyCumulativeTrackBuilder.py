@@ -154,14 +154,11 @@ class DailyCumulativeTrackBuilder:
             self.geojsonFeatures.append(feature)
 
             self.metaData.processedFlightsCount += 1
-            self.addFlightToStatistics()
+            self.runStatistics.flightsCount += 1
             del feature
         else:
-            print(f"File Discarder: isValid={flight.valid} isDurationOk={isDurationOk}")
-
-
-    def addFlightToStatistics(self):
-        self.runStatistics.flightsCount += 1
+            print(f"File Discarded: isValid={flight.valid} isDurationOk={isDurationOk}")
+       
 
     def _dumpToFiles(self):
         """
