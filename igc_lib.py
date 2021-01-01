@@ -807,9 +807,10 @@ class Flight:
         if not self.valid:
             return
 
-        self._check_fix_rawtime()
-        if not self.valid:
-            return
+        # HACK: Disabled as this does not apply in gliding and causes flights to be invalid is some cases....
+        #self._check_fix_rawtime()
+        #if not self.valid:
+        #    return
 
         if self.press_alt_valid:
             self.alt_source = "PRESS"

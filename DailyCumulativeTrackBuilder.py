@@ -178,7 +178,7 @@ class DailyCumulativeTrackBuilder:
             self.runStatistics.flightsCount += 1
             del feature
         else:
-            print(f"File Discarded: isValid={flight.valid} isDurationOk={isDurationOk}")
+            print(f"File Discarded: isDurationOk={isDurationOk}")
 
 
     def update_metadata(self):

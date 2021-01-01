@@ -31,9 +31,10 @@ if __name__ == "__main__":
         Request = type('Request', (object,), {})
         request = Request()
         request.args = {"source": "2020_ludovic"}
+        request.args = {"targetDate": "2020_12_30"}
 
-        res = launch_tracemap_alternative_source(request)
-        #res = launch_tracemap(None)
+        #res = launch_tracemap_alternative_source(request)
+        res = launch_tracemap(request)
         print(res)
     except SystemExit as e:
         if not e is None:
