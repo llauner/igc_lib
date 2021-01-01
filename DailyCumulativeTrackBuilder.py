@@ -65,13 +65,40 @@ class DailyCumulativeTrackBuilder:
 
         self.franceBoundingBox = Polygon(self.FRANCE_BOUNDING_BOX)
 
-        self.isRunningInCloud = not self.isOutToLocalFiles
-
         # Statistics
         self.runStatistics = DailyRunStatistics()
         self.geojsonFeatures = []
 
+    def run_alternative_source(self, source_folder):
+
+        # --- Get file list to process
+        self.storageService = StorageService(self.target_date, StorageService.Trace_aggregator_alternative_source_bucket_name)
+        self.fileList =  self.storageService.GetFileListForAlternativeSource(source_folder)
+        
+        # --- Process file list
+        self.process_file_list()
+        self.update_metadata()
+
+        # --- Dump result
+        self.dump_to_bucket_and_clean(source_folder)
+
     def run(self):
+        self.metaData.flightsCount = len(self.fileList)
+
+        # --- Process file list
+        self.process_file_list()
+        self.update_metadata()
+
+        # --- Dump result
+        if self.isOutToLocalFiles:      # Dump to local files
+            self._dumpToFiles()
+        else:                           # Dump to FTP
+            self._dumpToFtp()
+
+        return self.metaData
+
+
+    def process_file_list(self) :
         self.metaData.flightsCount = len(self.fileList)
 
         # --- Process files to get flights
@@ -96,12 +123,6 @@ class DailyCumulativeTrackBuilder:
                 
                 del flight
 
-        if self.isOutToLocalFiles:      # Dump to local files
-            self._dumpToFiles()
-        else:                           # Dump to FTP
-            self._dumpToFtp()
-
-        return self.metaData
 
     def createFlightGeoJson(self, flight):
         """
@@ -158,6 +179,12 @@ class DailyCumulativeTrackBuilder:
             del feature
         else:
             print(f"File Discarded: isValid={flight.valid} isDurationOk={isDurationOk}")
+
+
+    def update_metadata(self):
+        # --- Build metadata ----
+        tz = pytz.timezone('Europe/Paris')
+        self.metaData.script_end_time= datetime.now(tz)
        
 
     def _dumpToFiles(self):
@@ -213,14 +240,7 @@ class DailyCumulativeTrackBuilder:
 
         # --- Dump geojson ---
         geojson = igc2geojson.getJsonFromFeatures(self.geojsonFeatures)
-        ## Write geojson to FTP
-        #print(f"Dump to FTP: {self.ftpClientOut.host} ->{filenames.TracksGeojsonFilename}")
-        #FtpHelper.dumpStringToFTP( self.ftpClientOut,
-        #                          DailyCumulativeTrackBuilder.FTP_TRACKS_ROOT_DIRECTORY,
-        #                          filenames.TracksGeojsonFilename,
-        #                          geojson)
         
-
         # Write ZIP to FTP
         # Create zip file
         fileBufferZip = io.BytesIO()
@@ -230,7 +250,7 @@ class DailyCumulativeTrackBuilder:
         zf.close()
         fileBufferZip.seek(0)
 
-         # Upload to GCP Bucket
+        # Upload to GCP Bucket
         print( f"Dump ZIP to GCP Storage Bucket: {StorageService.Trace_aggregator_bucket_name} / {StorageService.Trace_aggregator_backlog_folder_name} / {filenames.TracksGeojsonZipFilename}")
         self.storageService.UploadFileToBucket(fileBufferZip, StorageService.Trace_aggregator_bucket_name, StorageService.Trace_aggregator_backlog_folder_name, filenames.TracksGeojsonZipFilename)
         fileBufferZip.seek(0)
@@ -242,17 +262,11 @@ class DailyCumulativeTrackBuilder:
                                 filenames.TracksGeojsonZipFilename,
                                 fileBufferZip)
 
-       
-
         fileBufferZip.close()
 
-
-
-        # --- Build metadata ----
-        print( f"Dump Metadata to FTP: { self.ftpClientOut.host} ->{filenames.TracksMetadataFilename}")
-        tz = pytz.timezone('Europe/Paris')
-        self.metaData.script_end_time= datetime.now(tz)
+        
         # metadata
+        print( f"Dump Metadata to FTP: { self.ftpClientOut.host} ->{filenames.TracksMetadataFilename}")
         FtpHelper.dumpStringToFTP(self.ftpClientOut,
                                   None,
                                   filenames.TracksMetadataFilename,
@@ -262,6 +276,35 @@ class DailyCumulativeTrackBuilder:
 
         del geojson
         del self.geojsonFeatures
+
+    def dump_to_bucket_and_clean(self, source_folder):
+        filenames = DumpFileName()
+        filenames.TracksMetadataFilename = DailyCumulativeTrackBuilder.TRACKS_METADATA_FILE_NAME.format(source_folder)
+        filenames.TracksGeojsonFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_FILE_NAME_WITH_SUFFIX.format(source_folder)
+        filenames.TracksGeojsonZipFilename = DailyCumulativeTrackBuilder.TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME.format(source_folder)
+
+        # --- Dump geojson ---
+        geojson = igc2geojson.getJsonFromFeatures(self.geojsonFeatures)
+
+        # Create zip file
+        fileBufferZip = io.BytesIO()
+        zf = zipfile.ZipFile(fileBufferZip, mode="w", compression=zipfile.ZIP_DEFLATED)
+        zf.writestr(filenames.TracksGeojsonFilename, geojson)
+        zf.close()
+
+        # Upload to GCP Bucket
+        print( f"Dump ZIP to GCP Storage Bucket: {StorageService.Trace_aggregator_alternative_source_bucket_name} / {source_folder} / {filenames.TracksGeojsonZipFilename}")
+        self.storageService.UploadFileToBucket(fileBufferZip, StorageService.Trace_aggregator_alternative_source_bucket_name, source_folder, filenames.TracksGeojsonZipFilename)
+        fileBufferZip.close()
+
+        # Metadata
+        print( f"Dump Metadata to GCP Storage Bucket: {StorageService.Trace_aggregator_alternative_source_bucket_name} / {source_folder} / {filenames.TracksMetadataFilename}")
+        jsonMetaData = self.JsonMetaData()
+        self.storageService.UploadStringToBucket(jsonMetaData, StorageService.Trace_aggregator_alternative_source_bucket_name, source_folder, filenames.TracksMetadataFilename)                
+
+        # Delet igc files from bucket
+        self.storageService.DeleteFilesFromBucket(self.fileList, StorageService.Trace_aggregator_alternative_source_bucket_name)
+
 
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)

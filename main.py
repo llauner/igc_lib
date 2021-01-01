@@ -20,11 +20,19 @@ def launch_tracemap_catchup(request):
 def launch_heatmap_catchup(request):
     main_heatmap.main_catchup(request)
 
+def launch_tracemap_alternative_source(request):
+    main_tracemap.main_alternative_source(request)
+
+
 
 
 if __name__ == "__main__":
     try:
-        res = launch_heatmap_catchup(None)
+        Request = type('Request', (object,), {})
+        request = Request()
+        request.args = {"source": "2020_ludovic"}
+
+        res = launch_tracemap_alternative_source(request)
         #res = launch_tracemap(None)
         print(res)
     except SystemExit as e:

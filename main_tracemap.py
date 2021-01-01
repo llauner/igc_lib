@@ -40,6 +40,23 @@ def main_catchup(request):
         main(request)
     
 
+def main_alternative_source(request):
+    '''
+    This will create the cumulated tracks files from igc files located in a GCP Bucket
+    This source bucket is netcoupe-igc-source
+    Inside this bucket the name of the "source" where to look for .igc file is the name of the folder
+    '''
+    if 'source' in request.args:
+        sourceFolder = request.args.get('source')
+
+    tz = pytz.timezone('Europe/Paris')
+    script_start_time = datetime.now(tz)
+    target_date = date(script_start_time.year,script_start_time.month, script_start_time.day)
+
+    cumulativeTrackBuilder = DailyCumulativeTrackBuilder(None, target_date, fileList=None, isOutToLocalFiles=False)
+    cumulativeTrackBuilder.run_alternative_source(sourceFolder)
+
+
 
 '''
 Main entry point for Google function
