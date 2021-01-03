@@ -11,6 +11,7 @@ class StorageService(object):
     Trace_aggregator_backlog_folder_name = "backlog" 
     Trace_aggregator_alternative_source_bucket_name = "netcoupe-igc-source"
 
+
     def __init__(self, target_date, bucket_name=None):
         if target_date:
             self.target_date = target_date = target_date.strftime('%Y_%m_%d') if not isinstance(target_date, str) else target_date
@@ -65,11 +66,11 @@ class StorageService(object):
         return hash, sortedList
 
 
-    def GetFileAsString(self, filename):
+    def GetFileAsStringFromBucket(self, bucket_name, filename):
         '''
         Get a file from the GCP storage bucket
         '''
-        bucket = self.storage_client.bucket(self.bucket_name)
+        bucket = self.storage_client.bucket(bucket_name)
         blob = bucket.blob(filename)
         f = BytesIO()
         blob.download_to_file(f)
@@ -77,17 +78,28 @@ class StorageService(object):
 
         return f
 
-    def GetFileFullpathFromName(self, filename):
+    def GetFileAsString(self, filename):
+        return self.GetFileAsStringFromBucket(self.bucket_name, filename)
+
+    def GetFileFullpathFromName(self, filename, filename_last_year = None):
         '''
         Get the file fullpath for a given filename
+        Will try in bucket from previous year if we can't find it in the current year
         '''
         blobs = list(self.storage_client.list_blobs(self.bucket_name, fields='items(name),nextPageToken'))
         filesFound = [x for x in blobs if filename in x.name]
 
         if (len(filesFound)>0):
-            return filesFound[0].name
-        else:
-            return None
+            return self.bucket_name, filesFound[0].name
+        # Could not find it for this year
+        elif filename_last_year is not None:
+            last_year = datetime.datetime.now().year - 1
+            last_year_bucket_name = f"netcoupe-igc-{last_year}"
+            blobs = list(self.storage_client.list_blobs(last_year_bucket_name, fields='items(name),nextPageToken'))
+            filesFound = [x for x in blobs if filename_last_year in x.name]
+            if (len(filesFound)>0):
+                return last_year_bucket_name, filesFound[0].name
+        return None, None
 
     def UploadFileToBucket(self, file, bucket_name, folder_name, file_name):
         bucket = self.storage_client.bucket(bucket_name)
