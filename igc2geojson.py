@@ -15,6 +15,8 @@ from datetime import datetime
 from datetime import datetime, date, time, timedelta
 from google.cloud import storage  # Imports the Google Cloud client library
 
+from HashHelper import HashHelper
+
 
 google_storage_bucket_id = "bucket_heatmap"      # Google storage bucket name
 
@@ -93,7 +95,7 @@ def get_geojson_track_collection_full(list_flights, isIncludeProperties=True):
 # -------- Features ------------------------------------------------------
 
 
-def get_geojson_feature_track_collection_simple(flight):
+def get_geojson_feature_track_collection_simple(flight, flightId=None):
     coordinates = []
     for i in range(0, len(flight.fixes)-2):
         lat1 = flight.fixes[i].lat
@@ -104,7 +106,14 @@ def get_geojson_feature_track_collection_simple(flight):
         coordinates.append([lon2, lat2])
 
     json_line = gjson.LineString(coordinates)
-    feature = gjson.Feature(geometry=json_line)
+
+    # Self computed flightId
+    if flightId is None:
+        computedFlightIdString = f"{flight.date_timestamp}_{flight.duration}_{flight.pilot_name}_{flight.glider_type}_{flight.glider_id}_{flight.fr_recorder_type}"
+        flightId = HashHelper.ComputeHashForList(computedFlightIdString)
+        
+    # Create feature
+    feature = gjson.Feature(geometry=json_line, properties={"flightId": flightId})
 
     del coordinates
 

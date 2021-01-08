@@ -6,6 +6,7 @@ import igc_lib
 import igc2geojson
 import numpy as np
 import zipfile
+import ntpath
 
 import io
 
@@ -48,6 +49,7 @@ class DailyCumulativeTrackBuilder:
     TRACKS_GEOJSON_ZIP_ARCHIVE_FILE_NAME = "{0}-tracks.geojson.zip"
 
     TRACKS_LOCAL_DUMP_DIRECTORY = "D:\\llauner\src\\cumulativeTracksWeb\\tracks\\"
+
 
     # --- Geo information ---41.196834, 10.328174
     FRANCE_BOUNDING_BOX = [(-6.566734, 51.722775), (10.645924,51.726922), (10.328174, 41.196834), (-7.213631, 40.847787)]
@@ -119,12 +121,13 @@ class DailyCumulativeTrackBuilder:
                     
 
                 # ----- Process flight -----
-                self.createFlightGeoJson(flight)
+                flightId = self.get_netcoupe_flight_id_from_filename(filename)
+                self.createFlightGeoJson(flight, flightId)
                 
                 del flight
 
 
-    def createFlightGeoJson(self, flight):
+    def createFlightGeoJson(self, flight, flightId = None):
         """
         Create GeoJson for given flight
 
@@ -171,7 +174,7 @@ class DailyCumulativeTrackBuilder:
         isFlightOK = flight.valid and isDurationOk and isInsindeFrance
 
         if isFlightOK:
-            feature = igc2geojson.get_geojson_feature_track_collection_simple(flight)
+            feature = igc2geojson.get_geojson_feature_track_collection_simple(flight, flightId)
             self.geojsonFeatures.append(feature)
 
             self.metaData.processedFlightsCount += 1
@@ -305,6 +308,22 @@ class DailyCumulativeTrackBuilder:
         # Delet igc files from bucket
         self.storageService.DeleteFilesFromBucket(self.fileList, StorageService.Trace_aggregator_alternative_source_bucket_name)
 
+
+    def get_netcoupe_flight_id_from_filename(self, filename):
+        '''
+        Try to extract the flightId from the filename.
+        filename has the form: NetCoupeYYYY_{flightId}.igc
+        Return None if cannot extract
+        '''
+        filename = ntpath.basename(filename)
+        first = '_'
+        last = '.igc'
+        try:
+            start = filename.index( first ) + len( first )
+            end = filename.index( last, start )
+            return filename[start:end]
+        except ValueError:
+            return None
 
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)

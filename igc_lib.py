@@ -939,6 +939,22 @@ class Flight:
             if match:
                 (self.competition_class,) = map(_strip_non_printable_chars,
                                                 match.groups())
+        elif record[0:5] == 'HFPLT':
+            match = re.match(
+                'HFPLT[ ]*PILOT.*:[ ]*(.*)',
+                record, flags=re.IGNORECASE)
+            if match:
+                (self.pilot_name,) = map(
+                    _strip_non_printable_chars, match.groups())
+
+        elif record[0:5] == 'HFGID':
+            match = re.match(
+                'HFGID[ ]*GLIDERID[ ]*:[ ]*(.*)',
+                record, flags=re.IGNORECASE)
+            if match:
+                (self.glider_id,) = map(
+                    _strip_non_printable_chars, match.groups())
+
 
     def __str__(self):
         descr = "Flight(valid=%s, fixes: %d" % (

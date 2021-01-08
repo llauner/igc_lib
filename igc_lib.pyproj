@@ -35,7 +35,6 @@ GOOGLE_APPLICATION_CREDENTIALS=C:\llauner\GoogleCloud_Credentials\Service_Accoun
   <ItemGroup>
     <Compile Include="HeatmapBuilder.py" />
     <Compile Include="DailyCumulativeTrackBuilder.py" />
-    <Compile Include="CumulativeTrackBuilder.py" />
     <Compile Include="DumpFileName.py" />
     <Compile Include="HeatmapFirestoreService.py" />
     <Compile Include="FtpHelper.py" />
